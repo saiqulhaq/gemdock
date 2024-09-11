@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-require_relative "lib/gemdock/version"
+require_relative "lib/gem_dock/version"
 
 Gem::Specification.new do |spec|
   spec.name = "gemdock"
-  spec.version = Gemdock::VERSION
+  spec.version = GemDock::VERSION
   spec.authors = ["Saiqul Haq"]
   spec.email = ["saiqulhaq@gmail.com"]
 
