@@ -34,8 +34,9 @@ module GemDock
     end
 
     desc "run COMMAND", "Run a dip command"
-    def run(command)
-      system("DIP_FILE=#{dip_file_path} dip run #{command}")
+    # @param commands [Array] command and parameters to run
+    def run(*commands)
+      system("DIP_FILE=#{dip_file_path} dip run #{commands.join(" ")}")
     end
 
     private

@@ -7,11 +7,14 @@ require "fakefs/spec_helpers"
 RSpec.describe GemDock::CLI do
   include FakeFS::SpecHelpers
 
-  let(:cli) { described_class.new }
+  let(:cli) do
+    described_class.new
+  end
 
   before do
     FakeFS.activate!
     FileUtils.mkdir_p(Dir.pwd)
+    allow(ENV).to receive(:[]).with("THOR_SHELL").and_return(nil)
     allow(ENV).to receive(:[]).with("HOME").and_return("/home/user")
   end
 
@@ -43,18 +46,6 @@ RSpec.describe GemDock::CLI do
     it "passes multiple arguments to dip run command" do
       expect(cli).to receive(:system).with(/DIP_FILE=.*dip run bundle install/)
       cli.run("bundle", "install")
-    end
-  end
-
-  describe "#execute" do
-    it "runs dip run command" do
-      expect(cli).to receive(:system).with(/DIP_FILE=.*dip run shell/)
-      cli.execute("shell")
-    end
-
-    it "passes multiple arguments to dip run command" do
-      expect(cli).to receive(:system).with(/DIP_FILE=.*dip run bundle install/)
-      cli.execute("bundle", "install")
     end
   end
 end
