@@ -65,11 +65,62 @@ module GemDock
     end
 
     def dip_yml_content
-      # Add the content of dip.yml here
+      <<~YAML
+        version: '8.0'
+
+        compose:
+          files:
+            - docker-compose.yml
+
+        interaction:
+          bash:
+            description: Open the Bash shell in app's container
+            service: gem-app
+            command: /bin/bash
+
+          bundle:
+            description: Run Bundler commands
+            service: gem-app
+            command: bundle
+
+          appraisal:
+            description: Run Appraisal commands
+            service: gem-app
+            command: bundle exec appraisal
+
+          rspec:
+            description: Run Rspec commands
+            service: gem-app
+            command: bundle exec rspec
+
+        provision:
+          - dip compose down --volumes
+          - rm -f Gemfile.lock gemfiles/*
+          - dip bundle install
+          # - dip appraisal install
+      YAML
     end
 
     def docker_compose_yml_content
-      # Add the content of docker-compose.yml here
+      <<~YAML
+        services:
+          gem-app:
+            image: ruby:${RUBY_IMAGE:-3.2}
+            environment:
+              - HISTFILE=/app/tmp/.bash_history
+              - BUNDLE_PATH=/bundle
+              - BUNDLE_CONFIG=/app/.bundle/config
+            command: bash
+            working_dir: /app
+            volumes:
+              - ${SOURCE_DIR:-#{Dir.pwd}}:/app:cached
+              - bundler_data:/bundle
+            tmpfs:
+              - /tmp
+
+        volumes:
+          bundler_data:
+      YAML
     end
   end
 end
