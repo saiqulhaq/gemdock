@@ -53,7 +53,7 @@ module GemDock
     end
 
     def gemdock_dir
-      File.join(ENV["HOME"], ".dip", "projects", project_path)
+      File.join(ENV["HOME"], ".dip", project_path)
     end
 
     def project_path
