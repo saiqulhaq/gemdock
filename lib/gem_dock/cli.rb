@@ -57,7 +57,7 @@ module GemDock
     end
 
     def project_path
-      Dir.pwd.sub("#{ENV['HOME']}/", "")
+      Dir.pwd.sub("#{ENV["HOME"]}/", "")
     end
 
     def dip_file_path
