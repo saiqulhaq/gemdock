@@ -3,6 +3,7 @@
 require "thor"
 require "fileutils"
 require "yaml"
+require "shellwords"
 
 module GemDock
   class CLI < Thor
@@ -36,7 +37,8 @@ module GemDock
     desc "run COMMAND", "Run a dip command"
     # @param commands [Array] command and parameters to run
     def run(*commands)
-      system("DIP_FILE=#{dip_file_path} dip run #{commands.join(" ")}")
+      escaped_commands = commands.map { |cmd| Shellwords.escape(cmd) }.join(' ')
+      system("DIP_FILE=#{Shellwords.escape(dip_file_path)} dip run #{escaped_commands}")
     end
 
     private
