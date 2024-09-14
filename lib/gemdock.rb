@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
-require_relative "gemdock/version"
+require_relative "gem_dock"
 
 module Gemdock
-  class Error < StandardError; end
-  # Your code goes here...
 end

@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-require_relative "lib/gemdock/version"
+require_relative "lib/gem_dock/version"
 
 Gem::Specification.new do |spec|
   spec.name = "gemdock"
-  spec.version = Gemdock::VERSION
+  spec.version = GemDock::VERSION
   spec.authors = ["Saiqul Haq"]
   spec.email = ["saiqulhaq@gmail.com"]
 
@@ -30,6 +30,6 @@ Gem::Specification.new do |spec|
   spec.executables = spec.files.grep(%r{\Aexe/}) { |f| File.basename(f) }
   spec.require_paths = ["lib"]
 
-  # Uncomment to register a new dependency of your gem
-  # spec.add_dependency "example-gem", "~> 1.0"
+  spec.add_dependency "thor"
+  spec.add_dependency "dip"
 end
