@@ -24,6 +24,7 @@ RSpec.describe GemDock::CLI do
 
   describe "#init" do
     it "creates dip.yml and docker-compose.yml" do
+      allow(cli).to receive(:default_ruby_version).and_return("3.2.2")
       cli.init
       expect(File).to exist(File.join(cli.send(:gemdock_dir), "dip.yml"))
       expect(File).to exist(File.join(cli.send(:gemdock_dir), "docker-compose.yml"))
