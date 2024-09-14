@@ -34,6 +34,13 @@ jobs:
         GEM_HOST_API_KEY: "Bearer ${{secrets.GITHUB_TOKEN}}"
         OWNER: ${{ github.repository_owner }}
 
+    - name: Wait for OTP
+      uses: step-security/wait-for-secrets@v1
+      id: wait-for-otp
+      with:
+        secrets: |
+          OTP: name: 'OTP for RubyGems' description: 'Enter OTP from your authenticator app'
+
     - name: Publish to RubyGems
       run: |
         mkdir -p $HOME/.gem
