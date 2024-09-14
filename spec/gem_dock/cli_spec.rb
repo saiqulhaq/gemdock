@@ -25,9 +25,24 @@ RSpec.describe GemDock::CLI do
   describe "#init" do
     it "creates dip.yml and docker-compose.yml" do
       allow(cli).to receive(:default_ruby_version).and_return("3.2.2")
+
       cli.init
       expect(File).to exist(File.join(cli.send(:gemdock_dir), "dip.yml"))
       expect(File).to exist(File.join(cli.send(:gemdock_dir), "docker-compose.yml"))
+    end
+  end
+
+  describe "#update" do
+    it "updates docker-compose.yml file" do
+      allow(cli).to receive(:default_ruby_version).and_return(GemDock::DEFAULT_RUBY_VERSION)
+      cli.init
+
+      allow(cli).to receive(:default_ruby_version).and_return("2.7.0")
+      cli.update
+
+      expect(File).to exist(File.join(cli.send(:gemdock_dir), "docker-compose.yml"))
+      # docker-compose.yml should contain the updated ruby version
+      expect(File.read(File.join(cli.send(:gemdock_dir), "docker-compose.yml"))).to include("2.7.0")
     end
   end
 
