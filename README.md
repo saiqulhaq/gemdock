@@ -18,10 +18,19 @@ To provision your development environment:
 
     $ gemdock provision
 
-To run a command using dip:
+To get available commands:
+
+    $ gemdock ls
+
+To run a command:
 
     $ gemdock run COMMAND
 
+## Guide
+
+* [Use GemDock to develop Rubygems](https://github.com/saiqulhaq/gemdock/blob/main/docs/gem-development-with-gemdoc-example.md)
+* [Store and quick start](https://saiqulhaq.id/very-fast-ruby-gem-development-testing)
+  
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
