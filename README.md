@@ -1,14 +1,10 @@
 # GemDock
 
-GemDock is a developer tool for managing development environments in Docker using the dip gem.
+GemDock is a developer tool for managing development environments in Docker.
 
 ## Installation
 
-Install the gem and add to the application's Gemfile by executing:
-
-    $ bundle add gemdock
-
-If bundler is not being used to manage dependencies, install the gem by executing:
+Install the gem by executing:
 
     $ gem install gemdock
 
