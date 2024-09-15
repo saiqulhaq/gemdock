@@ -29,7 +29,7 @@ To run a command:
 ## Guide
 
 * [Use GemDock to develop Rubygems](https://github.com/saiqulhaq/gemdock/blob/main/docs/gem-development-with-gemdoc-example.md)
-* [Store and quick start](https://saiqulhaq.id/very-fast-ruby-gem-development-testing)
+* [Story and Quick Start](https://saiqulhaq.id/very-fast-ruby-gem-development-testing)
   
 ## Development
 
