@@ -21,6 +21,8 @@ bundler gem hola
 cd hola
 ```
 
+FYI: You can get the source code of this tutorial at [https://github.com/saiqulhaq/hola](https://github.com/saiqulhaq/hola)
+
 ### 2. Update the Hola Gemspec
 
 Replace the content of `hola.gemspec` with:
@@ -174,4 +176,6 @@ gemdock run rspec
 
 Note: The `.greet` method demonstrates the difference between Ruby 2.7 and 3.x. It's not intended for production use.
 
-This revised version maintains the excellent content of your original while improving formatting and readability. It provides a clear, step-by-step guide to creating a gem with Gemdock, demonstrating version-specific features and Gemdock's version switching capabilities.
+This revised version maintains the excellent content of your original while improving formatting and readability. It provides a clear, step-by-step guide to creating a gem with Gemdock, demonstrating version-specific features and Gemdock's version switching capabilities.  
+
+FYI: You can get the source code of this tutorial at [https://github.com/saiqulhaq/hola](https://github.com/saiqulhaq/hola)
