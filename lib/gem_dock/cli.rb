@@ -24,56 +24,59 @@ module GemDock
     # end
 
     desc "exec COMMAND [ARGS...]", "Execute arbitrary commands in the container"
+    method_option :ruby_version, type: :string, aliases: "-r", desc: "Ruby version to use (e.g., 3.2.0, 2.7.0)"
     def exec(*args)
       if args.empty?
         puts "Error: No command specified"
-        puts "Usage: gemdock exec <command> [args...]"
+        puts "Usage: gemdock exec [--ruby-version VERSION] <command> [args...]"
         puts "Example: gemdock exec gem install bundler 2.4.22"
+        puts "         gemdock exec --ruby-version 3.2.0 bundle gem myproject"
         puts "         gemdock exec shell  # Opens an interactive shell"
         exit 1
       end
 
-      ensure_initialized
+      ruby_version = options[:ruby_version] || default_ruby_version
+      ensure_initialized(ruby_version)
 
       # Handle special 'shell' command
       if args.first == "shell"
-        run_shell
+        run_shell(ruby_version)
       else
-        run_command(args)
+        run_command(args, ruby_version)
       end
     end
 
     private
 
-    def ensure_initialized
-      unless File.exist?(docker_compose_file_path)
-        puts "GemDock not initialized. Initializing with default Ruby version..."
-        initialize_gemdock
+    def ensure_initialized(ruby_version)
+      compose_file = docker_compose_file_path(ruby_version)
+      unless File.exist?(compose_file)
+        puts "Initializing GemDock with Ruby version #{ruby_version}..."
+        initialize_gemdock(ruby_version)
       end
     end
 
-    def initialize_gemdock(ruby_version = nil)
-      ruby_version ||= default_ruby_version
+    def initialize_gemdock(ruby_version)
       create_gemdock_directory
       create_docker_compose_yml(ruby_version: ruby_version)
       puts "GemDock initialized successfully with Ruby version #{ruby_version}!"
     end
 
-    def run_shell
-      command = build_docker_compose_command(interactive: true)
+    def run_shell(ruby_version)
+      command = build_docker_compose_command(ruby_version, interactive: true)
       command << ["run", "--rm", "gem-app", "/bin/bash"]
       system(*command.flatten)
     end
 
-    def run_command(args)
-      command = build_docker_compose_command
+    def run_command(args, ruby_version)
+      command = build_docker_compose_command(ruby_version)
       command << ["run", "--rm", "gem-app", "bash", "-c", args.join(" ")]
       system(*command.flatten)
     end
 
-    def build_docker_compose_command(interactive: false)
+    def build_docker_compose_command(ruby_version, interactive: false)
       cmd = ["docker", "compose"]
-      cmd << ["-f", docker_compose_file_path]
+      cmd << ["-f", docker_compose_file_path(ruby_version)]
       
       if interactive
         # For interactive shell, we need TTY allocation
@@ -88,8 +91,8 @@ module GemDock
     end
 
     # add an argument to the method to accept Ruby version to use in docker compose file
-    def create_docker_compose_yml(ruby_version: default_ruby_version)
-      path = docker_compose_file_path
+    def create_docker_compose_yml(ruby_version:)
+      path = docker_compose_file_path(ruby_version)
       content = docker_compose_yml_content(ruby_version: ruby_version)
       File.write(path, content)
     end
@@ -98,11 +101,21 @@ module GemDock
       File.join(ENV["HOME"], ".gemdock")
     end
 
-    def docker_compose_file_path
-      File.join(gemdock_dir, "docker-compose.yml")
+    def docker_compose_file_path(ruby_version)
+      # Sanitize version for filename (e.g., "3.3.0" -> "3_3_0")
+      sanitized_version = sanitize_version(ruby_version)
+      File.join(gemdock_dir, "docker-compose-ruby-#{sanitized_version}.yml")
     end
 
-    def docker_compose_yml_content(ruby_version: default_ruby_version)
+    def sanitize_version(version)
+      version.gsub('.', '_').gsub('-', '_')
+    end
+
+    def docker_compose_yml_content(ruby_version:)
+      # Sanitize version for volume name (e.g., "3.3.0" -> "3_3_0")
+      volume_suffix = sanitize_version(ruby_version)
+      volume_name = "bundler_data_ruby_#{volume_suffix}"
+
       <<~YAML
         services:
           gem-app:
@@ -115,14 +128,14 @@ module GemDock
             working_dir: /app
             volumes:
               - ${SOURCE_DIR:-#{Dir.pwd}}:/app:cached
-              - bundler_data:/bundle
+              - #{volume_name}:/bundle
             tmpfs:
               - /tmp
             stdin_open: true
             tty: true
 
         volumes:
-          bundler_data:
+          #{volume_name}:
       YAML
     end
 

@@ -12,11 +12,19 @@ examples:
 gemdock exec gem install bundler 2.4.22
 gemdock exec rspec spec/
 gemdock exec shell   # Opens an interactive shell
+gemdock exec --ruby-version 3.2.0 bundle gem myproject
+gemdock exec --ruby-version 2.7.0 rspec spec/
 ```
 
 ## Execute Commands in Container
 
 This gem generates a `docker-compose.yml` file in the user home folder `$HOME/.gemdock`
+
+When using the `--ruby-version` flag, GemDock creates version-specific configuration files and volumes:
+- Configuration: `$HOME/.gemdock/docker-compose-ruby-<version>.yml`
+- Volume: `bundler_data_ruby_<version>`
+
+This allows you to work with multiple Ruby versions simultaneously without conflicts.
 
 ## Execute Arbitrary Commands
 
@@ -31,10 +39,47 @@ gemdock exec -- ls -la         # When command starts with dash
 gemdock exec ruby script.rb    # No double dash needed
 ```
 
+## Ruby Version Selection
+
+You can specify a Ruby version for any command using the `--ruby-version` (or `-r`) flag:
+
+```bash
+# Create a new gem with Ruby 3.2.0
+gemdock exec --ruby-version 3.2.0 bundle gem myproject
+
+# Run tests with Ruby 2.7.0
+gemdock exec --ruby-version 2.7.0 rspec spec/
+
+# Default behavior (uses latest stable Ruby)
+gemdock exec bundle install
+```
+
+### Version-Specific Volumes
+
+Each Ruby version gets its own isolated bundle cache volume. This ensures:
+- ✅ No gem conflicts between Ruby versions
+- ✅ Native extensions are compiled for the correct Ruby version
+- ✅ Fast switching between versions (volumes are cached)
+
+Example:
+```bash
+# First time with Ruby 3.3 - installs gems to bundler_data_ruby_3_3_0
+gemdock exec --ruby-version 3.3.0 bundle install
+
+# First time with Ruby 2.7 - installs gems to bundler_data_ruby_2_7_0
+gemdock exec --ruby-version 2.7.0 bundle install
+
+# Switch back to Ruby 3.3 - reuses cached gems
+gemdock exec --ruby-version 3.3.0 rspec spec/
+```
+
 ### interactive shell 
 To open an interactive shell inside the container, use:
 ```bash
 gemdock exec shell
+
+# Or with a specific Ruby version
+gemdock exec --ruby-version 3.1.0 shell
 ```
 
 # Inspiration
