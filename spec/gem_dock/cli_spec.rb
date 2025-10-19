@@ -22,46 +22,62 @@ RSpec.describe GemDock::CLI do
     FakeFS.deactivate!
   end
 
-  describe "#init" do
-    it "creates dip.yml and docker-compose.yml" do
-      allow(cli).to receive(:default_ruby_version).and_return("3.2.2")
+  describe "#exec" do
+    context "when docker-compose.yml does not exist" do
+      it "initializes gemdock automatically" do
+        allow(cli).to receive(:default_ruby_version).and_return("3.2.2")
+        allow(cli).to receive(:system).and_return(true)
 
-      cli.init
-      expect(File).to exist(File.join(cli.send(:gemdock_dir), "dip.yml"))
-      expect(File).to exist(File.join(cli.send(:gemdock_dir), "docker-compose.yml"))
-    end
-  end
+        cli.exec("gem", "install", "bundler")
 
-  describe "#update" do
-    it "updates docker-compose.yml file" do
-      allow(cli).to receive(:default_ruby_version).and_return(GemDock::DEFAULT_RUBY_VERSION)
-      cli.init
-
-      allow(cli).to receive(:default_ruby_version).and_return("2.7.0")
-      cli.update
-
-      expect(File).to exist(File.join(cli.send(:gemdock_dir), "docker-compose.yml"))
-      # docker-compose.yml should contain the updated ruby version
-      expect(File.read(File.join(cli.send(:gemdock_dir), "docker-compose.yml"))).to include("2.7.0")
-    end
-  end
-
-  describe "#provision" do
-    it "runs dip provision command" do
-      expect(cli).to receive(:system).with(/DIP_FILE=.*dip provision/)
-      cli.provision
-    end
-  end
-
-  describe "#run" do
-    it "runs dip run command" do
-      expect(cli).to receive(:system).with(/DIP_FILE=.*dip run shell/)
-      cli.run("shell")
+        expect(File).to exist(File.join(cli.send(:gemdock_dir), "docker-compose.yml"))
+      end
     end
 
-    it "passes multiple arguments to dip run command" do
-      expect(cli).to receive(:system).with(/DIP_FILE=.*dip run bundle install/)
-      cli.run("bundle", "install")
+    context "when docker-compose.yml exists" do
+      before do
+        allow(cli).to receive(:default_ruby_version).and_return("3.2.2")
+        cli.send(:initialize_gemdock)
+      end
+
+      it "runs arbitrary commands in container" do
+        expect(cli).to receive(:system) do |*args|
+          command = args.flatten.join(" ")
+          expect(command).to include("docker")
+          expect(command).to include("compose")
+          expect(command).to include("run")
+          expect(command).to include("gem install bundler")
+        end
+
+        cli.exec("gem", "install", "bundler")
+      end
+
+      it "opens interactive shell when 'shell' is passed" do
+        expect(cli).to receive(:system) do |*args|
+          command = args.flatten.join(" ")
+          expect(command).to include("docker")
+          expect(command).to include("compose")
+          expect(command).to include("run")
+          expect(command).to include("/bin/bash")
+        end
+
+        cli.exec("shell")
+      end
+
+      it "runs rspec commands" do
+        expect(cli).to receive(:system) do |*args|
+          command = args.flatten.join(" ")
+          expect(command).to include("rspec spec/")
+        end
+
+        cli.exec("rspec", "spec/")
+      end
+    end
+
+    context "when no command is provided" do
+      it "prints usage information and exits" do
+        expect { cli.exec }.to raise_error(SystemExit)
+      end
     end
   end
 end

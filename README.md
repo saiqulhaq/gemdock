@@ -1,6 +1,6 @@
 # GemDock
 
-GemDock is a developer tool for managing development environments in Docker.
+GemDock is a developer tool for managing Ruby gem development environments in Docker containers.
 
 ## Installation
 
@@ -10,21 +10,37 @@ Install the gem by executing:
 
 ## Usage
 
-To initialize GemDock in your project:
+GemDock automatically initializes when you first run a command. It creates a `docker-compose.yml` file in `$HOME/.gemdock`.
 
-    $ gemdock init
+### Execute Commands in Container
 
-To provision your development environment:
+To execute arbitrary commands in the container:
 
-    $ gemdock provision
+    $ gemdock exec gem install bundler 2.4.22
+    $ gemdock exec rspec spec/
+    $ gemdock exec ruby script.rb
 
-To get available commands:
+### Interactive Shell
 
-    $ gemdock ls
+To open an interactive shell inside the container:
 
-To run a command:
+    $ gemdock exec shell
 
-    $ gemdock run COMMAND
+### Examples
+
+```bash
+# Install a specific version of bundler
+gemdock exec gem install bundler 2.4.22
+
+# Run tests
+gemdock exec rspec spec/
+
+# Run bundle commands
+gemdock exec bundle install
+
+# Open an interactive shell
+gemdock exec shell
+```
 
 ## Guide
 

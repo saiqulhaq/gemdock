@@ -46,19 +46,7 @@ Gem::Specification.new do |spec|
 end
 ```
 
-### 3. Initialize Gemdock config
-
-```bash
-gemdock init 2.7
-```
-
-### 4. Provision of the development environment:
-
-```bash
-gemdock provision
-```
-
-### 5. Implement the Hola Gem
+### 3. Implement the Hola Gem
 
 Edit `lib/hola.rb`:
 
@@ -110,7 +98,7 @@ class Hola::Translator
 end
 ```
 
-### 6. Add tests in `spec/hola_spec.rb`:
+### 4. Add tests in `spec/hola_spec.rb`:
 
 ```ruby
 RSpec.describe Hola do
@@ -132,18 +120,18 @@ RSpec.describe Hola do
 end
 ```
 
-## 7. Testing
+## 5. Testing
 
-Run the RSpec tests:
+Gemdock will automatically initialize when you first run a command. Run the RSpec tests:
 
 ```bash
-gemdock run rspec
+gemdock exec rspec
 ```
 
-You can also test in IRB:
+You can also test in IRB. Open an interactive shell:
 
 ```bash
-gemdock run bash
+gemdock exec shell
 ```
 
 Inside the container, run `irb`.  
@@ -156,26 +144,23 @@ Hola.hi 'spanish'
 Hola.greet(name: 'World', language: 'spanish')
 ```
 
-## 8. Demonstrate Ruby Version Switching
+## 6. Working with Different Commands
 
-Switch to Ruby 3.3:
+Run bundle install:
 
 ```bash
-gemdock update 3.3
-gemdock provision
-gemdock run rspec
+gemdock exec bundle install
 ```
 
-Switch back to Ruby 2.7:
+Run other gem commands:
 
 ```bash
-gemdock update 2.7
-gemdock provision
-gemdock run rspec
+gemdock exec gem install bundler 2.4.22
+gemdock exec rake -T
 ```
 
 Note: The `.greet` method demonstrates the difference between Ruby 2.7 and 3.x. It's not intended for production use.
 
-This revised version maintains the excellent content of your original while improving formatting and readability. It provides a clear, step-by-step guide to creating a gem with Gemdock, demonstrating version-specific features and Gemdock's version switching capabilities.  
+This revised version provides a clear, step-by-step guide to creating a gem with Gemdock using the new exec-based interface.  
 
 FYI: You can get the source code of this tutorial at [https://github.com/saiqulhaq/hola](https://github.com/saiqulhaq/hola)

@@ -9,120 +9,97 @@ require "json"
 
 module GemDock
   class CLI < Thor
-    class << self
-      # Hackery. Take the run method away from Thor so that we can redefine it.
-      # https://github.com/ddollar/foreman/issues/655#issuecomment-263188152
-      def is_thor_reserved_word?(word, type)
-        return false if word == "run"
+    # class << self
+    #   # Hackery. Take the exec method away from Thor so that we can redefine it.
+    #   # https://github.com/ddollar/foreman/issues/655#issuecomment-263188152
+    #   def is_thor_reserved_word?(word, type)
+    #     return false if word == "exec"
 
-        super
+    #     super
+    #   end
+
+    #   def exit_on_failure?
+    #     true
+    #   end
+    # end
+
+    desc "exec COMMAND [ARGS...]", "Execute arbitrary commands in the container"
+    def exec(*args)
+      if args.empty?
+        puts "Error: No command specified"
+        puts "Usage: gemdock exec <command> [args...]"
+        puts "Example: gemdock exec gem install bundler 2.4.22"
+        puts "         gemdock exec shell  # Opens an interactive shell"
+        exit 1
       end
 
-      def exit_on_failure?
-        true
+      ensure_initialized
+
+      # Handle special 'shell' command
+      if args.first == "shell"
+        run_shell
+      else
+        run_command(args)
       end
     end
 
-    desc "init [RUBY_VERSION]", "Initialize GemDock in the current project"
-    method_option :ruby_version, type: :string, desc: "Ruby version to use in docker compose file. It will check the latest stable version from the internet if not provided."
-    def init(ruby_version = options[:ruby_version])
-      ruby_version = default_ruby_version if ruby_version.nil?
+    private
 
+    def ensure_initialized
+      unless File.exist?(docker_compose_file_path)
+        puts "GemDock not initialized. Initializing with default Ruby version..."
+        initialize_gemdock
+      end
+    end
+
+    def initialize_gemdock(ruby_version = nil)
+      ruby_version ||= default_ruby_version
       create_gemdock_directory
-      create_dip_yml
       create_docker_compose_yml(ruby_version: ruby_version)
       puts "GemDock initialized successfully with Ruby version #{ruby_version}!"
     end
 
-    desc "update", "Update docker-compose.yml file"
-    method_option :ruby_version, type: :string, desc: "Ruby version to use in docker compose file. It will check the latest stable version from the internet if not provided."
-    def update(ruby_version = options[:ruby_version])
-      ruby_version = default_ruby_version if ruby_version.nil?
-      create_docker_compose_yml(ruby_version: ruby_version)
-      puts "docker-compose.yml updated successfully!"
+    def run_shell
+      command = build_docker_compose_command(interactive: true)
+      command << ["run", "--rm", "gem-app", "/bin/bash"]
+      system(*command.flatten)
     end
 
-    desc "provision", "Run dip provision"
-    def provision
-      system("DIP_FILE=#{dip_file_path} dip provision")
+    def run_command(args)
+      command = build_docker_compose_command
+      command << ["run", "--rm", "gem-app", "bash", "-c", args.join(" ")]
+      system(*command.flatten)
     end
 
-    desc "run COMMAND", "Run a dip command"
-    # @param commands [Array] command and parameters to run
-    def run(*commands)
-      escaped_commands = commands.map { |cmd| Shellwords.escape(cmd) }.join(' ')
-      system("DIP_FILE=#{Shellwords.escape(dip_file_path)} dip run #{escaped_commands}")
+    def build_docker_compose_command(interactive: false)
+      cmd = ["docker", "compose"]
+      cmd << ["-f", docker_compose_file_path]
+      
+      if interactive
+        # For interactive shell, we need TTY allocation
+        cmd
+      else
+        cmd
+      end
     end
-
-    desc "ls", "List all available dip commands"
-    def ls
-      system("DIP_FILE=#{dip_file_path} dip ls")
-    end
-
-    private
 
     def create_gemdock_directory
       FileUtils.mkdir_p(gemdock_dir)
     end
 
-    def create_dip_yml
-      File.write(File.join(gemdock_dir, "dip.yml"), dip_yml_content)
-    end
-
     # add an argument to the method to accept Ruby version to use in docker compose file
     def create_docker_compose_yml(ruby_version: default_ruby_version)
-      path = File.join(gemdock_dir, "docker-compose.yml")
+      path = docker_compose_file_path
       content = docker_compose_yml_content(ruby_version: ruby_version)
       File.write(path, content)
     end
 
     def gemdock_dir
-      File.join(ENV["HOME"], ".dip", project_path)
+      File.join(ENV["HOME"], ".gemdock")
     end
 
-    def project_path
-      Dir.pwd.sub("#{ENV["HOME"]}/", "")
-    end
-
-    def dip_file_path
-      File.join(gemdock_dir, "dip.yml")
-    end
-
-    def dip_yml_content
-      <<~YAML
-        version: '8.0'
-
-        compose:
-          files:
-            - docker-compose.yml
-
-        interaction:
-          bash:
-            description: Open the Bash shell in app's container
-            service: gem-app
-            command: /bin/bash
-
-          bundle:
-            description: Run Bundler commands
-            service: gem-app
-            command: bundle
-
-          appraisal:
-            description: Run Appraisal commands
-            service: gem-app
-            command: bundle exec appraisal
-
-          rspec:
-            description: Run Rspec commands
-            service: gem-app
-            command: bundle exec rspec
-
-        provision:
-          - dip compose down --volumes
-          - rm -f Gemfile.lock gemfiles/*
-          - dip bundle install
-          # - dip appraisal install
-      YAML
+    def docker_compose_file_path
+      File.join(gemdock_dir, "docker-compose.yml")
     end
 
     def docker_compose_yml_content(ruby_version: default_ruby_version)
@@ -141,6 +118,8 @@ module GemDock
               - bundler_data:/bundle
             tmpfs:
               - /tmp
+            stdin_open: true
+            tty: true
 
         volumes:
           bundler_data:
