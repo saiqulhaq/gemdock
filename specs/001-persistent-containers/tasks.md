@@ -36,10 +36,10 @@ Generated from design artifacts: plan.md, data-model.md, quickstart.md, contract
 **Description**: Set up the basic file structure for new components
 
 **Acceptance Criteria**:
-- [ ] Create `lib/gem_dock/state_manager.rb`
-- [ ] Create `lib/gem_dock/config_manager.rb` 
-- [ ] Create `lib/gem_dock/container_manager.rb`
-- [ ] Create `lib/gem_dock/logger.rb`
+- [x] Create `lib/gem_dock/state_manager.rb`
+- [x] Create `lib/gem_dock/config_manager.rb` 
+- [x] Create `lib/gem_dock/container_manager.rb`
+- [x] Create `lib/gem_dock/logger.rb`
 - [ ] Create corresponding test files in `spec/gem_dock/`
 - [ ] Create `spec/gem_dock/integration/` directory
 - [ ] All files have proper Ruby module structure and copyright headers
