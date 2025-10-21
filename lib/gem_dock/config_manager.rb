@@ -2,9 +2,12 @@
 
 require "yaml"
 require "fileutils"
+require_relative "validators"
 
 module GemDock
   class ConfigManager
+    include Validators
+
     CONFIG_DIR = File.join(Dir.pwd, ".gemdock").freeze
     CONFIG_FILE = File.join(CONFIG_DIR, "config.yml").freeze
 
@@ -16,9 +19,6 @@ module GemDock
       "default_ruby_version" => nil,
       "log_level" => "info"
     }.freeze
-
-    VALID_LOG_LEVELS = %w[debug info warn error].freeze
-    VALID_MODES = %w[persistent ephemeral].freeze
 
     attr_reader :config
 
@@ -32,7 +32,7 @@ module GemDock
 
     def set(key, value)
       key_s = key.to_s
-      validate!(key_s, value)
+      validate_config_key!(key_s, value)
       @config[key_s] = value
       save_config
     end
@@ -75,20 +75,25 @@ module GemDock
       File.write(CONFIG_FILE, YAML.dump(DEFAULT_CONFIG))
     end
 
-    def validate!(key, value)
+    def validate_config_key!(key, value)
       case key
       when "mode"
-        raise ArgumentError, "Invalid mode: #{value}. Must be one of #{VALID_MODES.join(", ")}" unless VALID_MODES.include?(value)
+        validate_mode!(value)
       when "auto_provision", "auto_cleanup_idle"
-        raise ArgumentError, "Invalid boolean value: #{value}" unless [true, false].include?(value)
+        validate_boolean!(value, field: key)
       when "idle_timeout_hours"
-        raise ArgumentError, "Idle timeout must be an integer between 1 and 720" unless value.is_a?(Integer) && value.between?(1, 720)
+        validate_idle_timeout!(value)
       when "default_ruby_version"
-        raise ArgumentError, "Invalid Ruby version format: #{value}" unless value.nil? || value.match?(/\A\d+\.\d+\.\d+\z/)
+        validate_ruby_version!(value)
       when "log_level"
-        raise ArgumentError, "Invalid log level: #{value}. Must be one of #{VALID_LOG_LEVELS.join(", ")}" unless VALID_LOG_LEVELS.include?(value)
+        validate_log_level!(value)
       else
-        raise ArgumentError, "Unknown configuration key: #{key}"
+        raise ValidationError.new(
+          "Unknown configuration key: #{key}",
+          field: key,
+          value: value,
+          suggestion: "Valid keys are: #{DEFAULT_CONFIG.keys.join(", ")}"
+        )
       end
     end
   end

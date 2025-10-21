@@ -74,27 +74,27 @@ RSpec.describe GemDock::ConfigManager do
 
     context "with invalid values" do
       it "raises an error for invalid mode" do
-        expect { manager.set("mode", "invalid") }.to raise_error(ArgumentError, /Invalid mode/)
+        expect { manager.set("mode", "invalid") }.to raise_error(GemDock::Validators::ValidationError, /Invalid mode/)
       end
 
       it "raises an error for invalid boolean" do
-        expect { manager.set("auto_provision", "not_a_bool") }.to raise_error(ArgumentError, /Invalid boolean/)
+        expect { manager.set("auto_provision", "not_a_bool") }.to raise_error(GemDock::Validators::ValidationError, /Invalid boolean/)
       end
 
       it "raises an error for invalid idle timeout" do
-        expect { manager.set("idle_timeout_hours", 999) }.to raise_error(ArgumentError, /Idle timeout must be an integer/)
+        expect { manager.set("idle_timeout_hours", 999) }.to raise_error(GemDock::Validators::ValidationError, /Invalid idle timeout/)
       end
 
       it "raises an error for invalid Ruby version format" do
-        expect { manager.set("default_ruby_version", "3.2") }.to raise_error(ArgumentError, /Invalid Ruby version format/)
+        expect { manager.set("default_ruby_version", "3.2") }.to raise_error(GemDock::Validators::ValidationError, /Invalid Ruby version format/)
       end
 
       it "raises an error for invalid log level" do
-        expect { manager.set("log_level", "verbose") }.to raise_error(ArgumentError, /Invalid log level/)
+        expect { manager.set("log_level", "verbose") }.to raise_error(GemDock::Validators::ValidationError, /Invalid log level/)
       end
 
       it "raises an error for an unknown key" do
-        expect { manager.set("new_feature_enabled", true) }.to raise_error(ArgumentError, /Unknown configuration key/)
+        expect { manager.set("new_feature_enabled", true) }.to raise_error(GemDock::Validators::ValidationError, /Unknown configuration key/)
       end
     end
   end

@@ -3,15 +3,15 @@
 require "yaml"
 require "fileutils"
 require "time"
+require_relative "validators"
 
 module GemDock
   class StateManager
+    include Validators
+
     STATE_DIR = File.join(Dir.pwd, ".gemdock").freeze
     STATE_FILE = File.join(STATE_DIR, "state.yml").freeze
     STATE_VERSION = "1.0.0".freeze
-
-    VALID_STATUSES = %w[running stopped not_provisioned].freeze
-    CONTAINER_ID_PATTERN = /\A[a-f0-9]{64}\z/i.freeze
 
     attr_reader :state
 
@@ -24,7 +24,17 @@ module GemDock
     end
 
     def update_container(ruby_version, updates)
+      # Validate updates before applying
+      validate_container_updates!(ruby_version, updates)
+      
       @state["containers"][ruby_version] ||= default_container_state
+      
+      # Check state transition if status is being updated
+      if updates["status"]
+        old_status = @state["containers"][ruby_version]["status"]
+        validate_state_transition!(old_status, updates["status"]) if old_status != updates["status"]
+      end
+      
       @state["containers"][ruby_version].merge!(updates)
       @state["last_updated"] = Time.now.utc.iso8601
       save_state
@@ -107,9 +117,12 @@ module GemDock
     end
 
     def validate_state!(state)
-      raise "State must be a Hash" unless state.is_a?(Hash)
-      raise "Missing version field" unless state["version"]
-      raise "Missing containers field" unless state["containers"].is_a?(Hash)
+      raise ValidationError.new("State must be a Hash") unless state.is_a?(Hash)
+      raise ValidationError.new("Missing version field") unless state["version"]
+      raise ValidationError.new("Missing containers field") unless state["containers"].is_a?(Hash)
+
+      # Validate current_ruby exists in containers if set
+      validate_current_ruby_exists!(state["current_ruby"], state["containers"]) if state["current_ruby"]
 
       state["containers"].each do |version, container|
         validate_container_state!(version, container)
@@ -119,16 +132,43 @@ module GemDock
     def validate_container_state!(version, container)
       status = container["status"]
       container_id = container["container_id"]
+      volume_name = container["volume_name"]
+      last_used = container["last_used"]
+      created_at = container["created_at"]
 
-      raise "Invalid status for #{version}: #{status}" unless VALID_STATUSES.include?(status)
+      # Use validators module
+      validate_container_status!(status)
+      validate_container_id!(container_id)
+      validate_container_id_consistency!(status, container_id)
       
-      if status != "not_provisioned" && container_id
-        raise "Invalid container_id format for #{version}" unless container_id.match?(CONTAINER_ID_PATTERN)
-      end
+      # Validate volume name matches version
+      validate_volume_name!(volume_name, version) if volume_name
+      
+      # Validate timestamps
+      validate_timestamp!(last_used, field: "last_used") if last_used
+      validate_timestamp!(created_at, field: "created_at") if created_at
+    end
 
-      if status == "not_provisioned" && container_id
-        raise "Container #{version} marked as not_provisioned but has container_id"
+    def validate_container_updates!(ruby_version, updates)
+      # Validate status if present
+      validate_container_status!(updates["status"]) if updates["status"]
+      
+      # Validate container_id if present
+      validate_container_id!(updates["container_id"]) if updates.key?("container_id")
+      
+      # Validate consistency between status and container_id
+      if updates["status"] || updates.key?("container_id")
+        status = updates["status"] || @state["containers"][ruby_version]&.dig("status") || "not_provisioned"
+        container_id = updates.key?("container_id") ? updates["container_id"] : @state["containers"][ruby_version]&.dig("container_id")
+        validate_container_id_consistency!(status, container_id)
       end
+      
+      # Validate volume name if present
+      validate_volume_name!(updates["volume_name"], ruby_version) if updates["volume_name"]
+      
+      # Validate timestamps if present
+      validate_timestamp!(updates["last_used"], field: "last_used") if updates["last_used"]
+      validate_timestamp!(updates["created_at"], field: "created_at") if updates["created_at"]
     end
 
     def handle_corrupted_state(error_message)

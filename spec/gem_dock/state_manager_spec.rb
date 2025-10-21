@@ -120,6 +120,9 @@ RSpec.describe GemDock::StateManager do
     end
 
     it "persists changes to state file" do
+      # First transition to running
+      manager.update_container("3.2.0", {"status" => "running", "container_id" => "a" * 64})
+      # Then transition to stopped
       manager.update_container("3.2.0", {"status" => "stopped"})
       
       new_manager = described_class.new
@@ -128,7 +131,7 @@ RSpec.describe GemDock::StateManager do
 
     it "updates last_updated timestamp" do
       before_time = Time.now.utc - 1 # 1 second before to avoid timing issues
-      manager.update_container("3.2.0", {"status" => "running"})
+      manager.update_container("3.2.0", {"status" => "running", "container_id" => "a" * 64})
       
       last_updated = Time.parse(manager.state["last_updated"])
       expect(last_updated).to be >= before_time
@@ -136,7 +139,7 @@ RSpec.describe GemDock::StateManager do
 
     it "performs atomic save" do
       expect(File).to receive(:rename).with(/#{Regexp.escape(state_file)}\.tmp\.\d+/, state_file).and_call_original
-      manager.update_container("3.2.0", {"status" => "running"})
+      manager.update_container("3.2.0", {"status" => "running", "container_id" => "a" * 64})
     end
   end
 
@@ -144,11 +147,13 @@ RSpec.describe GemDock::StateManager do
     subject(:manager) { described_class.new }
 
     it "sets the current Ruby version" do
+      manager.update_container("3.2.0", {"status" => "running", "container_id" => "a" * 64})
       manager.set_current_ruby("3.2.0")
       expect(manager.current_ruby).to eq("3.2.0")
     end
 
     it "persists the change" do
+      manager.update_container("3.2.0", {"status" => "running", "container_id" => "a" * 64})
       manager.set_current_ruby("3.2.0")
       new_manager = described_class.new
       expect(new_manager.current_ruby).to eq("3.2.0")
@@ -158,12 +163,14 @@ RSpec.describe GemDock::StateManager do
   describe "status check methods" do
     subject(:manager) { described_class.new }
 
-    before do
-      manager.update_container("3.2.0", {"status" => "running"})
-      manager.update_container("3.1.0", {"status" => "stopped"})
-    end
-
     describe "#container_running?" do
+      before do
+        manager.update_container("3.2.0", {"status" => "running", "container_id" => "a" * 64})
+        # Setup 3.1.0 - first to running, then to stopped
+        manager.update_container("3.1.0", {"status" => "running", "container_id" => "b" * 64})
+        manager.update_container("3.1.0", {"status" => "stopped"})
+      end
+
       it "returns true for running containers" do
         expect(manager.container_running?("3.2.0")).to be true
       end
@@ -174,6 +181,14 @@ RSpec.describe GemDock::StateManager do
     end
 
     describe "#container_stopped?" do
+      before do
+        # Setup a container in stopped state
+        manager.update_container("3.1.0", {"status" => "running", "container_id" => "b" * 64})
+        manager.update_container("3.1.0", {"status" => "stopped"})
+        # Setup another in running state
+        manager.update_container("3.2.0", {"status" => "running", "container_id" => "a" * 64})
+      end
+
       it "returns true for stopped containers" do
         expect(manager.container_stopped?("3.1.0")).to be true
       end
@@ -184,6 +199,13 @@ RSpec.describe GemDock::StateManager do
     end
 
     describe "#container_provisioned?" do
+      before do
+        manager.update_container("3.2.0", {"status" => "running", "container_id" => "a" * 64})
+        # Setup 3.1.0 in stopped state (still provisioned)
+        manager.update_container("3.1.0", {"status" => "running", "container_id" => "b" * 64})
+        manager.update_container("3.1.0", {"status" => "stopped"})
+      end
+
       it "returns true for provisioned containers" do
         expect(manager.container_provisioned?("3.2.0")).to be true
         expect(manager.container_provisioned?("3.1.0")).to be true
@@ -199,7 +221,9 @@ RSpec.describe GemDock::StateManager do
     subject(:manager) { described_class.new }
 
     it "returns all containers" do
-      manager.update_container("3.2.0", {"status" => "running"})
+      manager.update_container("3.2.0", {"status" => "running", "container_id" => "a" * 64})
+      # Setup 3.1.0 - first to running, then to stopped
+      manager.update_container("3.1.0", {"status" => "running", "container_id" => "b" * 64})
       manager.update_container("3.1.0", {"status" => "stopped"})
       
       containers = manager.all_containers
