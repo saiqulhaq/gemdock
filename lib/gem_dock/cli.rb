@@ -11,6 +11,7 @@ require_relative "container_command_executor"
 require_relative "container_lifecycle"
 require_relative "container_provisioner"
 require_relative "container_cleanup"
+require_relative "container_inspector"
 require_relative "state_manager"
 require_relative "config_manager"
 
@@ -298,6 +299,15 @@ module GemDock
       exit 1
     end
 
+    desc "status", "Show current project and container status"
+    def status
+      project_status = container_inspector.project_status
+      puts container_inspector.format_project_status(project_status)
+    rescue StandardError => e
+      puts "Error getting status: #{e.message}"
+      exit 1
+    end
+
     private
 
     def auto_provisioner
@@ -355,6 +365,15 @@ module GemDock
         state_manager: state_manager,
         config_manager: config_manager,
         lifecycle: container_lifecycle
+      )
+    end
+
+    def container_inspector
+      @container_inspector ||= GemDock::ContainerInspector.new(
+        docker_command: docker_command,
+        state_manager: state_manager,
+        lifecycle: container_lifecycle,
+        health_check: health_check
       )
     end
 

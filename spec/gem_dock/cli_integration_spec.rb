@@ -12,6 +12,7 @@ RSpec.describe GemDock::CLI do
   let(:docker_command) { instance_double(GemDock::DockerCommand) }
   let(:state_manager) { instance_double(GemDock::StateManager) }
   let(:config_manager) { instance_double(GemDock::ConfigManager) }
+  let(:container_inspector) { instance_double(GemDock::ContainerInspector) }
 
   let(:cli) { described_class.new }
 
@@ -25,6 +26,7 @@ RSpec.describe GemDock::CLI do
     allow(GemDock::DockerCommand).to receive(:new).and_return(docker_command)
     allow(GemDock::StateManager).to receive(:new).and_return(state_manager)
     allow(GemDock::ConfigManager).to receive(:new).and_return(config_manager)
+    allow(GemDock::ContainerInspector).to receive(:new).and_return(container_inspector)
 
     # Mock default ruby version fetch to avoid network call
     stub_const("GemDock::DEFAULT_RUBY_VERSION", "3.2.0")
@@ -383,6 +385,43 @@ RSpec.describe GemDock::CLI do
 
         cli.invoke(:clean)
       end
+    end
+  end
+
+  describe "#status" do
+    let(:project_status) do
+      {
+        current_ruby_version: "3.2.0",
+        current_container_status: {
+          running: true,
+          status_icon: "✅",
+          health_status: :healthy,
+          health_icon: "💚"
+        },
+        docker_available: true,
+        compose_available: true,
+        total_containers: 2,
+        running_containers: 1
+      }
+    end
+
+    before do
+      allow(container_inspector).to receive(:project_status).and_return(project_status)
+    end
+
+    it "displays project status" do
+      formatted_status = "Project Status\nCurrent Ruby: 3.2.0"
+      allow(container_inspector).to receive(:format_project_status).with(project_status).and_return(formatted_status)
+
+      expect($stdout).to receive(:puts).with(formatted_status)
+
+      cli.invoke(:status)
+    end
+
+    it "handles errors gracefully" do
+      allow(container_inspector).to receive(:project_status).and_raise(StandardError.new("Docker not available"))
+
+      expect { cli.invoke(:status) }.to raise_error(SystemExit)
     end
   end
 end
