@@ -10,6 +10,7 @@ require_relative "auto_provisioner"
 require_relative "container_command_executor"
 require_relative "container_lifecycle"
 require_relative "container_provisioner"
+require_relative "container_cleanup"
 require_relative "state_manager"
 require_relative "config_manager"
 
@@ -261,6 +262,42 @@ module GemDock
       end
     end
 
+    desc "clean", "Remove unused containers and volumes"
+    method_option :all, type: :boolean, aliases: "-a", desc: "Remove all stopped containers regardless of age"
+    method_option :force, type: :boolean, aliases: "-f", desc: "Skip confirmation prompts"
+    method_option :dry_run, type: :boolean, aliases: "-d", desc: "Show what would be cleaned without actually cleaning"
+    def clean
+      # Show current stats
+      stats = container_cleanup.cleanup_stats
+      puts "Container Statistics:"
+      puts "  Total containers: #{stats[:total_containers]}"
+      puts "  Running: #{stats[:running_containers]}"
+      puts "  Stopped: #{stats[:stopped_containers]}"
+      puts "  Idle (>#{stats[:idle_timeout_hours]}h): #{stats[:idle_containers]}"
+      puts ""
+
+      # Perform cleanup
+      results = container_cleanup.cleanup(
+        all: options[:all] || false,
+        force: options[:force] || false,
+        dry_run: options[:dry_run] || false
+      )
+
+      # Show results
+      if results[:dry_run]
+        puts "\nDry run complete. Use 'gemdock clean --force' to actually remove containers."
+      elsif results[:cleaned] > 0 || results[:failed] > 0
+        puts "\nCleanup complete:"
+        puts "  Cleaned: #{results[:cleaned]}"
+        puts "  Failed: #{results[:failed]}" if results[:failed] > 0
+      else
+        puts "\nNo containers were cleaned."
+      end
+    rescue StandardError => e
+      puts "Error during cleanup: #{e.message}"
+      exit 1
+    end
+
     private
 
     def auto_provisioner
@@ -310,6 +347,15 @@ module GemDock
 
     def config_manager
       @config_manager ||= GemDock::ConfigManager.new
+    end
+
+    def container_cleanup
+      @container_cleanup ||= GemDock::ContainerCleanup.new(
+        docker_command: docker_command,
+        state_manager: state_manager,
+        config_manager: config_manager,
+        lifecycle: container_lifecycle
+      )
     end
 
     def run_interactive_shell(ruby_version, workdir = nil)

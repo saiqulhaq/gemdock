@@ -243,6 +243,148 @@ RSpec.describe GemDock::CLI do
       cli.invoke(:current)
     end
   end
+
+  describe "#clean" do
+    let(:container_cleanup) { instance_double(GemDock::ContainerCleanup) }
+
+    before do
+      allow(GemDock::ContainerCleanup).to receive(:new).and_return(container_cleanup)
+    end
+
+    context "with no containers to clean" do
+      it "displays statistics and reports no cleanup needed" do
+        allow(container_cleanup).to receive(:cleanup_stats).and_return({
+          total_containers: 2,
+          running_containers: 1,
+          stopped_containers: 1,
+          idle_containers: 0,
+          idle_timeout_hours: 24
+        })
+        allow(container_cleanup).to receive(:cleanup).and_return({
+          cleaned: 0,
+          skipped: 0,
+          failed: 0
+        })
+
+        expect($stdout).to receive(:puts).with("Container Statistics:")
+        expect($stdout).to receive(:puts).with(/No containers were cleaned/)
+
+        cli.invoke(:clean)
+      end
+    end
+
+    context "with containers to clean" do
+      it "displays cleanup results" do
+        allow(container_cleanup).to receive(:cleanup_stats).and_return({
+          total_containers: 3,
+          running_containers: 1,
+          stopped_containers: 2,
+          idle_containers: 1,
+          idle_timeout_hours: 24
+        })
+        allow(container_cleanup).to receive(:cleanup).and_return({
+          cleaned: 1,
+          skipped: 0,
+          failed: 0
+        })
+
+        expect($stdout).to receive(:puts).with("Container Statistics:")
+        expect($stdout).to receive(:puts).with(/Cleanup complete/)
+        expect($stdout).to receive(:puts).with(/Cleaned: 1/)
+
+        cli.invoke(:clean)
+      end
+    end
+
+    context "with --dry-run flag" do
+      it "shows what would be cleaned" do
+        allow(container_cleanup).to receive(:cleanup_stats).and_return({
+          total_containers: 2,
+          running_containers: 0,
+          stopped_containers: 2,
+          idle_containers: 1,
+          idle_timeout_hours: 24
+        })
+        allow(container_cleanup).to receive(:cleanup).and_return({
+          cleaned: 0,
+          skipped: 1,
+          failed: 0,
+          dry_run: true
+        })
+
+        expect($stdout).to receive(:puts).with(/Dry run complete/)
+
+        cli.invoke(:clean, [], dry_run: true)
+      end
+    end
+
+    context "with --all flag" do
+      it "passes the all flag to cleanup" do
+        allow(container_cleanup).to receive(:cleanup_stats).and_return({
+          total_containers: 2,
+          running_containers: 0,
+          stopped_containers: 2,
+          idle_containers: 0,
+          idle_timeout_hours: 24
+        })
+        expect(container_cleanup).to receive(:cleanup).with(
+          all: true,
+          force: false,
+          dry_run: false
+        ).and_return({
+          cleaned: 2,
+          skipped: 0,
+          failed: 0
+        })
+
+        cli.invoke(:clean, [], all: true)
+      end
+    end
+
+    context "with --force flag" do
+      it "passes the force flag to cleanup" do
+        allow(container_cleanup).to receive(:cleanup_stats).and_return({
+          total_containers: 2,
+          running_containers: 0,
+          stopped_containers: 2,
+          idle_containers: 1,
+          idle_timeout_hours: 24
+        })
+        expect(container_cleanup).to receive(:cleanup).with(
+          all: false,
+          force: true,
+          dry_run: false
+        ).and_return({
+          cleaned: 1,
+          skipped: 0,
+          failed: 0
+        })
+
+        cli.invoke(:clean, [], force: true)
+      end
+    end
+
+    context "with failures" do
+      it "reports failed cleanups" do
+        allow(container_cleanup).to receive(:cleanup_stats).and_return({
+          total_containers: 3,
+          running_containers: 0,
+          stopped_containers: 3,
+          idle_containers: 2,
+          idle_timeout_hours: 24
+        })
+        allow(container_cleanup).to receive(:cleanup).and_return({
+          cleaned: 1,
+          skipped: 0,
+          failed: 1
+        })
+
+        expect($stdout).to receive(:puts).with(/Failed: 1/)
+
+        cli.invoke(:clean)
+      end
+    end
+  end
 end
 
 RSpec.describe GemDock::Provision do
