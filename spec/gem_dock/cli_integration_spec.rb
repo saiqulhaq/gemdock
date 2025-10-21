@@ -158,6 +158,91 @@ RSpec.describe GemDock::CLI do
       end
     end
   end
+
+  describe "#switch" do
+    before do
+      allow(GemDock::Utils).to receive(:valid_ruby_version?).and_return(true)
+      allow(state_manager).to receive(:container_provisioned?).and_return(true)
+      allow(state_manager).to receive(:set_current_ruby)
+      allow(config_manager).to receive(:set)
+      allow(container_lifecycle).to receive(:running?).and_return(true)
+    end
+
+    it "switches to a valid provisioned version" do
+      expect(state_manager).to receive(:set_current_ruby).with("3.1.0")
+      expect(config_manager).to receive(:set).with("default_ruby_version", "3.1.0")
+      expect($stdout).to receive(:puts).with("Switched default Ruby version to 3.1.0")
+      cli.invoke(:switch, ["3.1.0"])
+    end
+
+    it "shows container status after switching" do
+      allow(container_lifecycle).to receive(:running?).with("3.1.0").and_return(true)
+      expect($stdout).to receive(:puts).with("Container is running and ready to use")
+      cli.invoke(:switch, ["3.1.0"])
+    end
+
+    it "notifies when container is stopped" do
+      allow(container_lifecycle).to receive(:running?).with("3.1.0").and_return(false)
+      expect($stdout).to receive(:puts).with(/Container is stopped/)
+      cli.invoke(:switch, ["3.1.0"])
+    end
+
+    context "with invalid version format" do
+      it "rejects invalid version and exits" do
+        allow(GemDock::Utils).to receive(:valid_ruby_version?).and_return(false)
+        expect($stdout).to receive(:puts).with("Error: Invalid Ruby version format 'invalid'")
+        expect { cli.invoke(:switch, ["invalid"]) }.to raise_error(SystemExit)
+      end
+    end
+
+    context "when container is not provisioned" do
+      it "shows error and exits" do
+        allow(state_manager).to receive(:container_provisioned?).and_return(false)
+        expect($stdout).to receive(:puts).with("Error: Container for Ruby 3.1.0 is not provisioned")
+        expect { cli.invoke(:switch, ["3.1.0"]) }.to raise_error(SystemExit)
+      end
+    end
+
+    context "when switching fails" do
+      it "handles errors gracefully" do
+        allow(state_manager).to receive(:set_current_ruby).and_raise(StandardError.new("State error"))
+        expect { cli.invoke(:switch, ["3.1.0"]) }.to raise_error(SystemExit)
+      end
+    end
+  end
+
+  describe "#current" do
+    it "shows current Ruby version when set" do
+      allow(state_manager).to receive(:state).and_return({ "current_ruby" => "3.2.0" })
+      allow(config_manager).to receive(:get).with("default_ruby_version").and_return(nil)
+      allow(container_lifecycle).to receive(:running?).with("3.2.0").and_return(true)
+      expect($stdout).to receive(:puts).with("Current Ruby version: 3.2.0")
+      expect($stdout).to receive(:puts).with("Status: running")
+      cli.invoke(:current)
+    end
+
+    it "shows stopped status when container is not running" do
+      allow(state_manager).to receive(:state).and_return({ "current_ruby" => "3.2.0" })
+      allow(config_manager).to receive(:get).with("default_ruby_version").and_return(nil)
+      allow(container_lifecycle).to receive(:running?).with("3.2.0").and_return(false)
+      expect($stdout).to receive(:puts).with("Status: stopped")
+      cli.invoke(:current)
+    end
+
+    it "shows default version when no current version" do
+      allow(state_manager).to receive(:state).and_return({})
+      allow(config_manager).to receive(:get).with("default_ruby_version").and_return("3.2.0")
+      expect($stdout).to receive(:puts).with("Default Ruby version: 3.2.0 (not yet used)")
+      cli.invoke(:current)
+    end
+
+    it "shows message when no version is set" do
+      allow(state_manager).to receive(:state).and_return({})
+      allow(config_manager).to receive(:get).with("default_ruby_version").and_return(nil)
+      expect($stdout).to receive(:puts).with("No Ruby version set")
+      cli.invoke(:current)
+    end
+  end
 end
 
 RSpec.describe GemDock::Provision do

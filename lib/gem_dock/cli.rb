@@ -206,6 +206,61 @@ module GemDock
     desc "provision SUBCOMMAND", "Manage container lifecycle"
     subcommand "provision", Provision
 
+    desc "switch VERSION", "Set the default Ruby version for future commands"
+    def switch(ruby_version)
+      # Validate Ruby version format
+      unless GemDock::Utils.valid_ruby_version?(ruby_version)
+        puts "Error: Invalid Ruby version format '#{ruby_version}'"
+        puts "Expected format: X.Y.Z (e.g., 3.2.0)"
+        exit 1
+      end
+
+      # Check if container is provisioned
+      unless state_manager.container_provisioned?(ruby_version)
+        puts "Error: Container for Ruby #{ruby_version} is not provisioned"
+        puts "Run 'gemdock provision create #{ruby_version}' first"
+        exit 1
+      end
+
+      # Update current Ruby version in state
+      state_manager.set_current_ruby(ruby_version)
+
+      # Update default Ruby version in config
+      config_manager.set("default_ruby_version", ruby_version)
+
+      puts "Switched default Ruby version to #{ruby_version}"
+      
+      # Show container status
+      if container_lifecycle.running?(ruby_version)
+        puts "Container is running and ready to use"
+      else
+        puts "Container is stopped. Run 'gemdock provision start #{ruby_version}' to start it"
+      end
+    rescue StandardError => e
+      puts "Error switching version: #{e.message}"
+      exit 1
+    end
+
+    desc "current", "Show the current default Ruby version"
+    def current
+      current_ruby = state_manager.state["current_ruby"]
+      default_ruby = config_manager.get("default_ruby_version")
+
+      if current_ruby
+        puts "Current Ruby version: #{current_ruby}"
+        if container_lifecycle.running?(current_ruby)
+          puts "Status: running"
+        else
+          puts "Status: stopped"
+        end
+      elsif default_ruby
+        puts "Default Ruby version: #{default_ruby} (not yet used)"
+      else
+        puts "No Ruby version set"
+        puts "Run 'gemdock provision create VERSION' to create a container"
+      end
+    end
+
     private
 
     def auto_provisioner
