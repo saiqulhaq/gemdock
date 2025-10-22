@@ -15,6 +15,7 @@ Or run a specific integration test file:
 ```bash
 RUN_INTEGRATION_TESTS=1 bundle exec rspec spec/integration/container_lifecycle_integration_spec.rb
 RUN_INTEGRATION_TESTS=1 bundle exec rspec spec/integration/auto_provisioning_integration_spec.rb
+RUN_INTEGRATION_TESTS=1 bundle exec rspec spec/integration/error_recovery_integration_spec.rb
 ```
 
 ## Requirements
@@ -96,6 +97,38 @@ Tests the automatic provisioning workflows:
    - Safe to call ensure_ready multiple times
    - Reuses existing containers
    - No duplicate provisioning
+
+### Error Recovery Integration Tests (`error_recovery_integration_spec.rb`)
+
+Tests error scenarios and recovery mechanisms:
+
+1. **Container crash recovery** (2 scenarios)
+   - Detects and handles crashed containers
+   - Recovers from container killed during operation
+   - Tests graceful error handling and restart
+
+2. **Docker daemon unavailable scenarios** (2 scenarios)
+   - Provides helpful error when Docker is not running
+   - Handles Docker command timeouts gracefully
+
+3. **Corrupted state file recovery** (3 scenarios)
+   - Recovers from corrupted JSON state file
+   - Handles missing state file gracefully
+   - Validates state data integrity on load
+
+4. **Resource cleanup after failures** (3 scenarios)
+   - Cleans up partial provision on failure
+   - Removes orphaned containers on cleanup
+   - Handles volume cleanup when container removal fails
+
+5. **Recovery messaging and guidance** (3 scenarios)
+   - Provides actionable error messages for common failures
+   - Suggests next steps after failed operations
+   - Detects and reports Docker permission issues
+
+6. **State consistency after errors** (2 scenarios)
+   - Maintains consistent state when start fails
+   - Rolls back state on provision failure
 
 ## Test Isolation
 
