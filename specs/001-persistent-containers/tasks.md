@@ -21,17 +21,19 @@ Auto-Provisioning Integration Tests
 **Description**: Test auto-provisioning workflows
 
 **Acceptance Criteria**:
-- [ ] Test first-time user flow (auto-provision with prompt)
-- [ ] Test stopped container auto-restart
-- [ ] Test version switching with resource management
-- [ ] Test CI/CD mode (no prompts)
-- [ ] Test configuration-driven behavior
-- [ ] Write good enough RSpec test and test it in terminal and make sure all pass
+- [x] Test first-time user flow (auto-provision with prompt)
+- [x] Test stopped container auto-restart
+- [x] Test version switching with resource management
+- [x] Test CI/CD mode (no prompts)
+- [x] Test configuration-driven behavior
+- [x] Test idempotency (multiple ensure_ready calls)
+- [x] Write good enough RSpec test and test it in terminal and make sure all pass
 
 **Implementation Notes**:
 - Mock user input for prompt testing
 - Test with different configuration values
 - Verify no prompts in CI environment
+- Created spec/integration/auto_provisioning_integration_spec.rb with 9 test scenarios
 
 ---
 
