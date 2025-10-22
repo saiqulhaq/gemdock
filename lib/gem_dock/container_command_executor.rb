@@ -60,20 +60,20 @@ module GemDock
     )
       container_state = state_manager.container_state(ruby_version)
       
-      unless container_state[:status] == "running"
+      unless container_state["status"] == "running"
         logger.error("Container not running", {
           ruby_version: ruby_version,
-          status: container_state[:status]
+          status: container_state["status"]
         })
         return {
           success: false,
           output: "",
-          stderr: "Container is not running (status: #{container_state[:status]})",
+          stderr: "Container is not running (status: #{container_state["status"]})",
           exit_code: 1
         }
       end
 
-      container_id = container_state[:container_id]
+      container_id = container_state["container_id"]
       
       if check_health && !verify_container_health(container_id, ruby_version)
         return {
@@ -119,15 +119,15 @@ module GemDock
     def execute_interactive(ruby_version, command: "bash", workdir: nil)
       container_state = state_manager.container_state(ruby_version)
       
-      unless container_state[:status] == "running"
+      unless container_state["status"] == "running"
         logger.error("Container not running", {
           ruby_version: ruby_version,
-          status: container_state[:status]
+          status: container_state["status"]
         })
         return 1
       end
 
-      container_id = container_state[:container_id]
+      container_id = container_state["container_id"]
       
       logger.info("Starting interactive session", {
         ruby_version: ruby_version,
@@ -160,9 +160,9 @@ module GemDock
     # @return [Boolean] true if container is ready
     def ready?(ruby_version)
       container_state = state_manager.container_state(ruby_version)
-      return false unless container_state[:status] == "running"
+      return false unless container_state["status"] == "running"
 
-      container_id = container_state[:container_id]
+      container_id = container_state["container_id"]
       verify_container_health(container_id, ruby_version)
     end
 

@@ -57,7 +57,7 @@ module GemDock
     # @return [Boolean] true if container is ready, false otherwise
     def ensure_ready(ruby_version, project_path: Dir.pwd)
       container_state = state_manager.container_state(ruby_version)
-      status = container_state[:status]
+      status = container_state["status"]
 
       logger.debug("Checking container readiness", {
         ruby_version: ruby_version,

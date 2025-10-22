@@ -30,14 +30,14 @@ module GemDock
 
       # Check if already running
       current_state = state_manager.container_state(ruby_version)
-      if current_state[:status] == "running"
+      if current_state["status"] == "running"
         logger.info("Container already running", ruby_version: ruby_version)
         return true
       end
 
       # Start using docker compose
       result = docker.compose(
-        "up -d",
+        "-f #{compose_file} up -d",
         timeout: DockerCommand::DOCKER_TIMEOUT
       )
 

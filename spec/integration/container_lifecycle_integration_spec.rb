@@ -12,20 +12,19 @@ RSpec.describe "Container Lifecycle Integration", :integration do
   let(:config_manager) { managers[:config_manager] }
   let(:docker_command) { managers[:docker_command] }
   let(:health_check) { managers[:health_check] }
+  let(:logger) { managers[:logger] }
   
   let(:container_lifecycle) do
     GemDock::ContainerLifecycle.new(
-      docker_command: docker_command,
+      docker: docker_command,
       health_check: health_check,
-      state_manager: state_manager
+      state_manager: state_manager,
+      logger: logger
     )
   end
   
   let(:container_provisioner) do
-    GemDock::ContainerProvisioner.new(
-      docker_command: docker_command,
-      state_manager: state_manager
-    )
+    GemDock::ContainerProvisioner.new(logger: logger)
   end
   
   let(:container_cleanup) do

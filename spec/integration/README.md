@@ -10,6 +10,12 @@ Integration tests are excluded by default because they require Docker to be runn
 RUN_INTEGRATION_TESTS=1 bundle exec rspec spec/integration
 ```
 
+Or run with `--next-failure` to fix tests iteratively:
+
+```bash
+RUN_INTEGRATION_TESTS=1 bundle exec rspec --next-failure
+```
+
 Or run a specific integration test file:
 
 ```bash

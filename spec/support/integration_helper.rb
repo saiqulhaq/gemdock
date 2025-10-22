@@ -138,19 +138,41 @@ module IntegrationHelper
 
   # Create test managers with test directory
   def create_test_managers
-    state_file = File.join(test_gemdock_dir, "state.yml")
-    config_file = File.join(test_gemdock_dir, "config.yml")
+    # Stub constants to use test directory
+    test_state_dir = test_gemdock_dir
+    test_state_file = File.join(test_state_dir, "state.yml")
+    test_config_file = File.join(test_state_dir, "config.yml")
     
-    state_manager = GemDock::StateManager.new(state_file: state_file)
-    config_manager = GemDock::ConfigManager.new(config_file: config_file)
+    # Ensure test directory exists
+    FileUtils.mkdir_p(test_state_dir)
+    
+    # Stub StateManager constants
+    stub_const("GemDock::StateManager::STATE_DIR", test_state_dir)
+    stub_const("GemDock::StateManager::STATE_FILE", test_state_file)
+    
+    # Stub ConfigManager constants
+    stub_const("GemDock::ConfigManager::CONFIG_DIR", test_state_dir)
+    stub_const("GemDock::ConfigManager::CONFIG_FILE", test_config_file)
+    
+    # Create a test logger that doesn't write to disk
+    logger = double("Logger",
+      info: nil,
+      warn: nil,
+      error: nil,
+      debug: nil
+    )
+    
+    state_manager = GemDock::StateManager.new
+    config_manager = GemDock::ConfigManager.new
     docker_command = GemDock::DockerCommand.new
-    health_check = GemDock::ContainerHealthCheck.new(docker_command: docker_command)
+    health_check = GemDock::ContainerHealthCheck.new(docker: docker_command)
     
     {
       state_manager: state_manager,
       config_manager: config_manager,
       docker_command: docker_command,
-      health_check: health_check
+      health_check: health_check,
+      logger: logger
     }
   end
 end

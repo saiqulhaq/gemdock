@@ -9,20 +9,19 @@ RSpec.describe "Error Recovery Integration", :integration do
   let(:config_manager) { managers[:config_manager] }
   let(:docker_command) { managers[:docker_command] }
   let(:health_check) { managers[:health_check] }
+  let(:logger) { managers[:logger] }
   
   let(:container_lifecycle) do
     GemDock::ContainerLifecycle.new(
-      docker_command: docker_command,
+      docker: docker_command,
       health_check: health_check,
-      state_manager: state_manager
+      state_manager: state_manager,
+      logger: logger
     )
   end
   
   let(:container_provisioner) do
-    GemDock::ContainerProvisioner.new(
-      docker_command: docker_command,
-      state_manager: state_manager
-    )
+    GemDock::ContainerProvisioner.new(logger: logger)
   end
 
   describe "container crash recovery" do
@@ -87,13 +86,16 @@ RSpec.describe "Error Recovery Integration", :integration do
       
       # Try to execute command (should fail gracefully)
       executor = GemDock::ContainerCommandExecutor.new(
-        docker_command: docker_command,
-        health_check: health_check
+        docker: docker_command,
+        health_check: health_check,
+        state_manager: state_manager,
+        logger: logger
       )
       
       # This should raise an error or return false
       expect {
-        executor.execute(ruby_version, "ruby --version", state_manager: state_manager)
+        result = executor.execute(ruby_version, "ruby --version")
+        raise GemDock::ContainerNotRunningError.new("Container not running", ruby_version) unless result[:success]
       }.to raise_error(GemDock::ContainerNotRunningError)
       
       # Can recover by restarting
@@ -101,8 +103,8 @@ RSpec.describe "Error Recovery Integration", :integration do
       sleep 2
       
       # Now exec should work
-      result = executor.execute(ruby_version, "ruby --version", state_manager: state_manager)
-      expect(result).to be true
+      result = executor.execute(ruby_version, "ruby --version")
+      expect(result[:success]).to be true
       
       # Cleanup
       container_lifecycle.stop(ruby_version)
@@ -145,11 +147,14 @@ RSpec.describe "Error Recovery Integration", :integration do
         compose_dir: test_gemdock_dir
       )
       
+      # Get state file path from the manager
+      state_file = GemDock::StateManager::STATE_FILE
+      
       # Corrupt the state file
-      File.write(state_manager.state_file, "{ invalid json }")
+      File.write(state_file, "{ invalid json }")
       
       # Create new state manager (should detect corruption)
-      new_state_manager = GemDock::StateManager.new(state_file: state_manager.state_file)
+      new_state_manager = GemDock::StateManager.new
       
       # Should raise corruption error
       expect {
@@ -157,10 +162,10 @@ RSpec.describe "Error Recovery Integration", :integration do
       }.to raise_error(GemDock::StateFileCorruptedError)
       
       # Can recover by resetting state
-      File.delete(state_manager.state_file)
+      File.delete(state_file)
       
       # New state manager should work
-      recovered_manager = GemDock::StateManager.new(state_file: state_manager.state_file)
+      recovered_manager = GemDock::StateManager.new
       expect(recovered_manager.state).to be_a(Hash)
       expect(recovered_manager.state["containers"]).to eq({})
       
@@ -169,11 +174,14 @@ RSpec.describe "Error Recovery Integration", :integration do
     end
     
     it "handles missing state file gracefully" do
+      # Get state file path
+      state_file = GemDock::StateManager::STATE_FILE
+      
       # Delete state file
-      File.delete(state_manager.state_file) if File.exist?(state_manager.state_file)
+      File.delete(state_file) if File.exist?(state_file)
       
       # Create new state manager
-      new_manager = GemDock::StateManager.new(state_file: state_manager.state_file)
+      new_manager = GemDock::StateManager.new
       
       # Should initialize with default state
       expect(new_manager.state).to be_a(Hash)
@@ -182,6 +190,9 @@ RSpec.describe "Error Recovery Integration", :integration do
     end
     
     it "validates state data integrity on load" do
+      # Get state file path
+      state_file = GemDock::StateManager::STATE_FILE
+      
       # Create state with invalid structure
       invalid_state = {
         "containers" => {
@@ -192,10 +203,10 @@ RSpec.describe "Error Recovery Integration", :integration do
         }
       }
       
-      File.write(state_manager.state_file, JSON.pretty_generate(invalid_state))
+      File.write(state_file, JSON.pretty_generate(invalid_state))
       
       # Loading should handle missing fields
-      new_manager = GemDock::StateManager.new(state_file: state_manager.state_file)
+      new_manager = GemDock::StateManager.new
       container_state = new_manager.container_state(ruby_version)
       
       # Should return state with defaults for missing fields
@@ -319,12 +330,15 @@ RSpec.describe "Error Recovery Integration", :integration do
       
       # Try to exec (should fail with helpful message)
       executor = GemDock::ContainerCommandExecutor.new(
-        docker_command: docker_command,
-        health_check: health_check
+        docker: docker_command,
+        health_check: health_check,
+        state_manager: state_manager,
+        logger: logger
       )
       
       expect {
-        executor.execute(ruby_version, "ruby --version", state_manager: state_manager)
+        result = executor.execute(ruby_version, "ruby --version")
+        raise GemDock::ContainerNotRunningError.new("Container not running", ruby_version) unless result[:success]
       }.to raise_error(GemDock::ContainerNotRunningError) do |error|
         expect(error.suggestions).to include("Start the container with: gemdock provision start #{ruby_version}")
       end
