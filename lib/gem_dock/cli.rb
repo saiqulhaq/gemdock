@@ -15,6 +15,7 @@ require_relative "container_inspector"
 require_relative "state_manager"
 require_relative "config_manager"
 require_relative "validators"
+require_relative "prompt_helper"
 
 module GemDock
   # Config subcommand class - for configuration management
@@ -81,9 +82,8 @@ module GemDock
     method_option :force, type: :boolean, aliases: "-f", desc: "Skip confirmation prompt"
     def reset
       unless options[:force]
-        print "This will reset all configuration to defaults. Continue? (yes/no): "
-        response = $stdin.gets.chomp
-        unless response.downcase == "yes"
+        question = "This will reset all configuration to defaults. Continue?"
+        unless PromptHelper.yes_no(question, default: false)
           puts "Reset cancelled."
           return
         end

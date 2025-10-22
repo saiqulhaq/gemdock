@@ -5,6 +5,7 @@ require_relative "container_provisioner"
 require_relative "container_lifecycle"
 require_relative "state_manager"
 require_relative "config_manager"
+require_relative "prompt_helper"
 
 module GemDock
   # Handles automatic provisioning of containers with user interaction
@@ -161,24 +162,15 @@ module GemDock
     # @param ruby_version [String] Ruby version
     # @return [Boolean] true if user confirms
     def prompt_for_provisioning(ruby_version)
-      print "\n"
-      print "Container for Ruby #{ruby_version} is not provisioned.\n"
-      print "Would you like to provision it now? (y/n): "
+      question = "Container for Ruby #{ruby_version} is not provisioned. Would you like to provision it now?"
       
-      response = $stdin.gets&.strip&.downcase
+      result = PromptHelper.yes_no(question, default: false)
       
-      case response
-      when "y", "yes"
-        print "\n"
-        true
-      when "n", "no"
-        print "Provisioning cancelled.\n\n"
+      unless result
         logger.info("User declined provisioning", ruby_version: ruby_version)
-        false
-      else
-        print "Invalid response. Please enter 'y' or 'n'.\n"
-        prompt_for_provisioning(ruby_version)
       end
+      
+      result
     end
 
     # Execute a block with progress indication

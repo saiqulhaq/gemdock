@@ -6,6 +6,7 @@ require_relative "config_manager"
 require_relative "container_lifecycle"
 require_relative "utils"
 require_relative "logger"
+require_relative "prompt_helper"
 
 module GemDock
   # Manages cleanup of unused containers and volumes
@@ -132,16 +133,15 @@ module GemDock
     end
 
     def confirm_cleanup(candidates)
-      puts "\nThe following containers will be removed:"
-      candidates.each do |version|
+      details = candidates.map do |version|
         container_info = state_manager.container_state(version)
         last_used = container_info["last_used"] || "unknown"
-        puts "  - Ruby #{version} (last used: #{last_used})"
+        volume = container_info["volume_name"] || "gemdock-ruby-#{Utils.sanitize_version(version)}"
+        "- Ruby #{version}\n    Last used: #{last_used}\n    Volume: #{volume}"
       end
 
-      print "\nThis will remove containers and their volumes. Continue? (yes/no): "
-      response = $stdin.gets.chomp
-      response.downcase == "yes"
+      question = "This will remove #{candidates.size} container(s) and their volumes. Continue?"
+      PromptHelper.confirm_with_details(question, details: details, default: false)
     end
 
     def perform_cleanup(candidates)

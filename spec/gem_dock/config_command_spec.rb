@@ -3,10 +3,6 @@
 require "spec_helper"
 require "gem_dock/cli"
 
-# frozen_string_literal: true
-
-require "spec_helper"
-
 RSpec.describe GemDock::Config do
   let(:config_manager) { instance_double(GemDock::ConfigManager) }
   let(:config) { GemDock::Config.new }
@@ -220,13 +216,13 @@ RSpec.describe GemDock::Config do
     context "without force flag" do
       it "asks for confirmation" do
         allow(config_manager).to receive(:reset!)
-        allow($stdin).to receive(:gets).and_return("yes\n")
+        allow(GemDock::PromptHelper).to receive(:yes_no).and_return(true)
         
-        expect { config.invoke(:reset) }.to output(/Continue\?/).to_stdout
+        expect { config.invoke(:reset) }.to output(/Configuration reset to defaults/).to_stdout
       end
 
       it "resets when user confirms" do
-        allow($stdin).to receive(:gets).and_return("yes\n")
+        allow(GemDock::PromptHelper).to receive(:yes_no).and_return(true)
         
         expect(config_manager).to receive(:reset!)
 
@@ -234,7 +230,7 @@ RSpec.describe GemDock::Config do
       end
 
       it "cancels when user declines" do
-        allow($stdin).to receive(:gets).and_return("no\n")
+        allow(GemDock::PromptHelper).to receive(:yes_no).and_return(false)
         
         expect(config_manager).not_to receive(:reset!)
 
@@ -244,7 +240,7 @@ RSpec.describe GemDock::Config do
 
     context "with force flag" do
       it "skips confirmation" do
-        expect($stdin).not_to receive(:gets)
+        expect(GemDock::PromptHelper).not_to receive(:yes_no)
         expect(config_manager).to receive(:reset!)
 
         config.invoke(:reset, [], force: true)

@@ -161,7 +161,7 @@ RSpec.describe GemDock::AutoProvisioner do
         end
 
         it "prompts user and provisions on 'y'" do
-          allow($stdin).to receive(:gets).and_return("y\n")
+          allow(GemDock::PromptHelper).to receive(:yes_no).and_return(true)
 
           result = auto_provisioner.ensure_ready(ruby_version, project_path: tmpdir)
 
@@ -170,7 +170,7 @@ RSpec.describe GemDock::AutoProvisioner do
         end
 
         it "prompts user and provisions on 'yes'" do
-          allow($stdin).to receive(:gets).and_return("yes\n")
+          allow(GemDock::PromptHelper).to receive(:yes_no).and_return(true)
 
           result = auto_provisioner.ensure_ready(ruby_version, project_path: tmpdir)
 
@@ -179,7 +179,7 @@ RSpec.describe GemDock::AutoProvisioner do
         end
 
         it "prompts user and cancels on 'n'" do
-          allow($stdin).to receive(:gets).and_return("n\n")
+          allow(GemDock::PromptHelper).to receive(:yes_no).and_return(false)
 
           result = auto_provisioner.ensure_ready(ruby_version, project_path: tmpdir)
 
@@ -188,7 +188,7 @@ RSpec.describe GemDock::AutoProvisioner do
         end
 
         it "reprompts on invalid input then accepts 'y'" do
-          allow($stdin).to receive(:gets).and_return("invalid\n", "y\n")
+          allow(GemDock::PromptHelper).to receive(:yes_no).and_return(true)
 
           result = auto_provisioner.ensure_ready(ruby_version, project_path: tmpdir)
 
@@ -196,7 +196,7 @@ RSpec.describe GemDock::AutoProvisioner do
         end
 
         it "logs user decline" do
-          allow($stdin).to receive(:gets).and_return("n\n")
+          allow(GemDock::PromptHelper).to receive(:yes_no).and_return(false)
 
           auto_provisioner.ensure_ready(ruby_version, project_path: tmpdir)
 
