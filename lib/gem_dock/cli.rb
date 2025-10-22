@@ -14,8 +14,129 @@ require_relative "container_cleanup"
 require_relative "container_inspector"
 require_relative "state_manager"
 require_relative "config_manager"
+require_relative "validators"
 
 module GemDock
+  # Config subcommand class - for configuration management
+  class Config < Thor
+    desc "list", "Show all configuration settings"
+    def list
+      config = config_manager.all
+      
+      puts "Current Configuration:"
+      puts "=" * 50
+      puts ""
+      
+      config.each do |key, value|
+        display_value = value.nil? ? "(not set)" : value.to_s
+        puts "  #{key}: #{display_value}"
+      end
+      
+      puts ""
+      puts "Configuration file: #{config_manager.config_file_path}"
+    rescue StandardError => e
+      puts "Error listing configuration: #{e.message}"
+      exit 1
+    end
+
+    desc "get KEY", "Get a specific configuration value"
+    def get(key)
+      unless config_manager.key_exists?(key)
+        puts "Error: Unknown configuration key '#{key}'"
+        puts "Valid keys: #{config_manager.valid_keys.join(", ")}"
+        exit 1
+      end
+
+      value = config_manager.get(key)
+      display_value = value.nil? ? "(not set)" : value.to_s
+      puts "#{key}: #{display_value}"
+    rescue StandardError => e
+      puts "Error getting configuration: #{e.message}"
+      exit 1
+    end
+
+    desc "set KEY VALUE", "Set a configuration value"
+    def set(key, value)
+      unless config_manager.key_exists?(key)
+        puts "Error: Unknown configuration key '#{key}'"
+        puts "Valid keys: #{config_manager.valid_keys.join(", ")}"
+        exit 1
+      end
+      
+      # Convert string values to appropriate types
+      converted_value = convert_value(key, value)
+      
+      config_manager.set(key, converted_value)
+      puts "Configuration updated: #{key} = #{converted_value}"
+      puts "Configuration saved to: #{config_manager.config_file_path}"
+    rescue GemDock::Validators::ValidationError => e
+      puts "Error: #{e.message}"
+      exit 1
+    rescue StandardError => e
+      puts "Error setting configuration: #{e.message}"
+      exit 1
+    end
+
+    desc "reset", "Reset configuration to defaults"
+    method_option :force, type: :boolean, aliases: "-f", desc: "Skip confirmation prompt"
+    def reset
+      unless options[:force]
+        print "This will reset all configuration to defaults. Continue? (yes/no): "
+        response = $stdin.gets.chomp
+        unless response.downcase == "yes"
+          puts "Reset cancelled."
+          return
+        end
+      end
+
+      config_manager.reset!
+      puts "Configuration reset to defaults."
+      puts "Configuration file: #{config_manager.config_file_path}"
+    rescue StandardError => e
+      puts "Error resetting configuration: #{e.message}"
+      exit 1
+    end
+
+    private
+
+    def config_manager
+      @config_manager ||= GemDock::ConfigManager.new
+    end
+
+    def convert_value(key, value)
+      case key
+      when "auto_provision", "auto_cleanup_idle"
+        # Convert to boolean
+        case value.downcase
+        when "true", "yes", "1"
+          true
+        when "false", "no", "0"
+          false
+        else
+          raise GemDock::Validators::ValidationError.new(
+            "Invalid boolean value: #{value}",
+            field: key,
+            value: value,
+            suggestion: "Use: true, false, yes, no, 1, or 0"
+          )
+        end
+      when "idle_timeout_hours"
+        # Convert to integer
+        Integer(value)
+      else
+        # Keep as string
+        value
+      end
+    rescue ArgumentError
+      raise GemDock::Validators::ValidationError.new(
+        "Invalid integer value: #{value}",
+        field: key,
+        value: value,
+        suggestion: "Provide a valid number"
+      )
+    end
+  end
+
   # Provision subcommand class - defined first so it can be referenced
   class Provision < Thor
     desc "start [RUBY_VERSION]", "Start a container for the specified Ruby version"
@@ -96,31 +217,35 @@ module GemDock
     end
 
     desc "list", "List all provisioned containers and their status"
+    method_option :format, type: :string, aliases: "-f", desc: "Output format: text or json", default: "text"
     def list
       containers = state_manager.all_containers
 
       if containers.empty?
-        puts "No containers provisioned yet."
-        puts "Run 'gemdock provision create VERSION' to create one."
+        if options[:format] == "json"
+          puts "[]"
+        else
+          puts "No containers provisioned yet."
+          puts "Run 'gemdock provision create VERSION' to create one."
+        end
         return
       end
 
-      puts "Provisioned containers:"
-      puts ""
-      containers.each do |ruby_version, container_info|
-        status = container_lifecycle.running?(ruby_version) ? "running" : "stopped"
-        health = if container_lifecycle.running?(ruby_version)
-          health_check.check(GemDock::Utils.container_name(ruby_version), use_cache: false)
-          health_check.check(GemDock::Utils.container_name(ruby_version)).status
-        else
-          "n/a"
-        end
-
-        puts "  Ruby #{ruby_version}:"
-        puts "    Status: #{status}"
-        puts "    Health: #{health}" if status == "running"
-        puts "    Container: #{container_info['container_id']}" if container_info['container_id']
+      if options[:format] == "json"
+        # JSON output
+        container_statuses = container_inspector.inspect_all_containers
+        require "json"
+        puts JSON.pretty_generate(container_statuses)
+      else
+        # Text output with icons and formatting
+        puts "Provisioned containers:"
         puts ""
+        
+        container_statuses = container_inspector.inspect_all_containers
+        container_statuses.each do |status|
+          puts container_inspector.format_container_info(status)
+          puts ""
+        end
       end
     end
 
@@ -153,6 +278,15 @@ module GemDock
 
     def state_manager
       @state_manager ||= GemDock::StateManager.new
+    end
+
+    def container_inspector
+      @container_inspector ||= GemDock::ContainerInspector.new(
+        docker_command: docker_command,
+        state_manager: state_manager,
+        lifecycle: container_lifecycle,
+        health_check: health_check
+      )
     end
 
     def compose_file_path(ruby_version)
@@ -207,6 +341,9 @@ module GemDock
 
     desc "provision SUBCOMMAND", "Manage container lifecycle"
     subcommand "provision", Provision
+
+    desc "config SUBCOMMAND", "Manage configuration settings"
+    subcommand "config", Config
 
     desc "switch VERSION", "Set the default Ruby version for future commands"
     def switch(ruby_version)

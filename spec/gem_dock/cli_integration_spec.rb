@@ -589,34 +589,75 @@ RSpec.describe GemDock::Provision do
   end
 
   describe "#list" do
+    let(:container_inspector) { instance_double(GemDock::ContainerInspector) }
+
     before do
+      allow(GemDock::ContainerInspector).to receive(:new).and_return(container_inspector)
       allow(state_manager).to receive(:all_containers)
     end
 
-    it "displays message when no containers exist" do
-      allow(state_manager).to receive(:all_containers).and_return({})
-      expect($stdout).to receive(:puts).with("No containers provisioned yet.")
-      provision.invoke(:list)
+    context "with no containers" do
+      before do
+        allow(state_manager).to receive(:all_containers).and_return({})
+      end
+
+      it "displays message in text format" do
+        expect($stdout).to receive(:puts).with("No containers provisioned yet.")
+        provision.invoke(:list)
+      end
+
+      it "outputs empty JSON array in json format" do
+        expect($stdout).to receive(:puts).with("[]")
+        provision.invoke(:list, [], format: "json")
+      end
     end
 
-    it "lists containers with their status" do
-      allow(state_manager).to receive(:all_containers).and_return({
-        "3.2.0" => { "container_id" => "abc123", "status" => "running" },
-        "3.1.0" => { "container_id" => "def456", "status" => "stopped" }
-      })
-      allow(container_lifecycle).to receive(:running?).with("3.2.0").and_return(true)
-      allow(container_lifecycle).to receive(:running?).with("3.1.0").and_return(false)
-      
-      health_status = GemDock::ContainerHealthCheck::HealthStatus.new(
-        status: :healthy,
-        ruby_version: "3.2.0",
-        message: "OK",
-        checked_at: Time.now
-      )
-      allow(health_check).to receive(:check).and_return(health_status)
+    context "with containers" do
+      let(:containers) do
+        {
+          "3.2.0" => { "container_id" => "abc123", "status" => "running" },
+          "3.1.0" => { "container_id" => "def456", "status" => "stopped" }
+        }
+      end
 
-      expect($stdout).to receive(:puts).with("Provisioned containers:")
-      provision.invoke(:list)
+      let(:container_statuses) do
+        [
+          {
+            ruby_version: "3.2.0",
+            running: true,
+            status_icon: "✅",
+            container_id: "abc123"
+          },
+          {
+            ruby_version: "3.1.0",
+            running: false,
+            status_icon: "⏸️",
+            container_id: "def456"
+          }
+        ]
+      end
+
+      before do
+        allow(state_manager).to receive(:all_containers).and_return(containers)
+        allow(container_inspector).to receive(:inspect_all_containers).and_return(container_statuses)
+      end
+
+      it "lists containers with formatted output in text format" do
+        allow(container_inspector).to receive(:format_container_info).and_return("formatted info")
+        
+        expect($stdout).to receive(:puts).with("Provisioned containers:")
+        expect(container_inspector).to receive(:format_container_info).twice
+
+        provision.invoke(:list)
+      end
+
+      it "outputs JSON in json format" do
+        expect($stdout).to receive(:puts) do |output|
+          expect { JSON.parse(output) }.not_to raise_error
+        end
+
+        provision.invoke(:list, [], format: "json")
+      end
     end
   end
 end

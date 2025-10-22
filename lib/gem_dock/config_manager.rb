@@ -49,6 +49,32 @@ module GemDock
       get("auto_provision")
     end
 
+    # Get all configuration as hash
+    def all
+      @config.dup
+    end
+
+    # Reset configuration to defaults
+    def reset!
+      @config = DEFAULT_CONFIG.dup
+      save_config
+    end
+
+    # Get configuration file path
+    def config_file_path
+      CONFIG_FILE
+    end
+
+    # Check if a key exists
+    def key_exists?(key)
+      DEFAULT_CONFIG.key?(key.to_s)
+    end
+
+    # Get list of valid keys
+    def valid_keys
+      DEFAULT_CONFIG.keys
+    end
+
     private
 
     def load_config
