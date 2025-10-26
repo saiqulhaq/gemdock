@@ -1,7 +1,10 @@
 # frozen_string_literal: true
 
 require "gemdock"
-require "pry"
+require "byebug"
+
+# Load support files
+Dir[File.join(__dir__, "support", "**", "*.rb")].each { |f| require f }
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure

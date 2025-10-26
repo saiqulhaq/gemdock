@@ -31,5 +31,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   spec.add_dependency "thor"
-  spec.add_dependency "dip"
+  spec.add_dependency "tty-prompt"
+  spec.add_dependency "semantic_logger"
+  spec.add_development_dependency "fakefs"
 end

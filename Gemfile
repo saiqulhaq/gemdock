@@ -9,7 +9,7 @@ less_than_2_7 = Gem::Version.new(RUBY_VERSION) < Gem::Version.new("2.7")
 fakefs_version = less_than_2_7 ? "~> 1.8" : "~> 2.5"
 
 gem "fakefs", fakefs_version
-gem "pry", "~> 0.14.2"
+gem "byebug"
 gem "rake", "~> 13.0"
 gem "rspec", "~> 3.0"
 gem "simplecov", "~> 0.22.0"
