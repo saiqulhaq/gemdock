@@ -458,13 +458,6 @@ module GemDock
 
   class CLI < Thor
     class << self
-      # Hackery. Take the exec method away from Thor so that we can redefine it.
-      # https://github.com/ddollar/foreman/issues/655#issuecomment-263188152
-      def is_thor_reserved_word?(word, type)
-        return false if word == "exec"
-        super
-      end
-
       def exit_on_failure?
         true
       end
@@ -502,6 +495,7 @@ module GemDock
     DESC
     method_option :ruby_version, type: :string, aliases: "-r", desc: "Ruby version to use (e.g., 3.2.0, 2.7.0)"
     method_option :workdir, type: :string, aliases: "-w", desc: "Working directory inside container"
+    method_option :verbose, type: :boolean, aliases: "-v", desc: "Enable verbose logging"
     def exec(*args)
       if args.empty?
         puts "Error: No command specified"
@@ -524,8 +518,11 @@ module GemDock
       else
         run_command(ruby_version, args, options[:workdir])
       end
-    rescue StandardError => e
+    rescue => e
       puts "Error: #{e.message}"
+      if options[:verbose]
+        puts e.backtrace
+      end
       exit 1
     end
 
@@ -762,35 +759,37 @@ module GemDock
 
     private
 
+    def logger 
+      @logger ||= GemDock::Logger.new
+    end
+
     def auto_provisioner
       @auto_provisioner ||= GemDock::AutoProvisioner.new(
         provisioner: container_provisioner,
         lifecycle: container_lifecycle,
         config_manager: config_manager,
-        state_manager: state_manager
+        state_manager: state_manager,
+        logger: logger
       )
     end
 
     def command_executor
       @command_executor ||= GemDock::ContainerCommandExecutor.new(
         health_check: health_check,
-        docker_command: docker_command
+        docker_command: docker_command,
+        logger: logger
       )
     end
 
     def container_lifecycle
       @container_lifecycle ||= GemDock::ContainerLifecycle.new(
-        docker_command: docker_command,
         health_check: health_check,
         state_manager: state_manager
       )
     end
 
     def container_provisioner
-      @container_provisioner ||= GemDock::ContainerProvisioner.new(
-        docker_command: docker_command,
-        state_manager: state_manager
-      )
+      @container_provisioner ||= GemDock::ContainerProvisioner.new(logger: logger,)
     end
 
     def health_check

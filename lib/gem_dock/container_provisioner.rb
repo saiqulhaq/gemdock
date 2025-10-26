@@ -26,7 +26,7 @@ module GemDock
     # Initialize the provisioner
     #
     # @param logger [Logger] Logger instance for operation tracking
-    def initialize(logger: GemDock::Logger.instance)
+    def initialize(logger: GemDock::Logger.new)
       @logger = logger
     end
 

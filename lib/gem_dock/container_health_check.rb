@@ -23,10 +23,10 @@ module GemDock
       end
     end
 
-    attr_reader :docker, :logger, :health_cache
+    attr_reader :docker_command, :logger, :health_cache
 
-    def initialize(docker: nil, logger: nil)
-      @docker = docker || DockerCommand.new
+    def initialize(docker_command: nil, logger: nil)
+      @docker_command = docker_command || DockerCommand.new
       @logger = logger || Logger.new
       @health_cache = {}
     end
@@ -44,10 +44,10 @@ module GemDock
 
       logger.info("Performing health check", container_id: container_id)
       status = perform_health_check(container_id)
-      
+
       # Cache the result
       cache_health(container_id, status)
-      
+
       status
     end
 
@@ -79,17 +79,17 @@ module GemDock
       start_time = Time.now
 
       # First check if container exists and is running
-      inspect_result = docker.execute(
+      inspect_result = docker_command.execute(
         "inspect --format='{{.State.Status}}' #{container_id}",
         timeout: 2
       )
 
       unless inspect_result[:success]
         duration = Time.now - start_time
-        logger.warn("Container not found", 
+        logger.warn("Container not found",
                    container_id: container_id,
                    duration: duration.round(3))
-        
+
         return HealthStatus.new(
           :not_found,
           nil,
@@ -99,14 +99,14 @@ module GemDock
       end
 
       status = inspect_result[:output].strip
-      
+
       unless status == "running"
         duration = Time.now - start_time
         logger.warn("Container not running",
                    container_id: container_id,
                    status: status,
                    duration: duration.round(3))
-        
+
         return HealthStatus.new(
           :unhealthy,
           nil,
@@ -116,7 +116,7 @@ module GemDock
       end
 
       # Check if container is responsive by executing Ruby version command
-      exec_result = docker.execute(
+      exec_result = docker_command.execute(
         "exec #{container_id} ruby --version",
         timeout: HEALTH_CHECK_TIMEOUT
       )
@@ -125,12 +125,12 @@ module GemDock
 
       if exec_result[:success]
         ruby_version = parse_ruby_version(exec_result[:output])
-        
+
         logger.info("Container healthy",
                    container_id: container_id,
                    ruby_version: ruby_version,
                    duration: duration.round(3))
-        
+
         HealthStatus.new(
           :healthy,
           ruby_version,
@@ -142,7 +142,7 @@ module GemDock
                    container_id: container_id,
                    error: exec_result[:stderr],
                    duration: duration.round(3))
-        
+
         HealthStatus.new(
           :unhealthy,
           nil,
@@ -155,7 +155,7 @@ module GemDock
       logger.warn("Health check timed out",
                  container_id: container_id,
                  duration: duration.round(3))
-      
+
       HealthStatus.new(
         :unhealthy,
         nil,
@@ -168,7 +168,7 @@ module GemDock
                   container_id: container_id,
                   error: e.message,
                   duration: duration.round(3))
-      
+
       HealthStatus.new(
         :unhealthy,
         nil,

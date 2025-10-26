@@ -36,7 +36,7 @@ module GemDock
       lifecycle: nil,
       state_manager: StateManager.new,
       config_manager: ConfigManager.new,
-      logger: GemDock::Logger.instance
+      logger: GemDock::Logger.new
     )
       @provisioner = provisioner
       @lifecycle = lifecycle

@@ -21,21 +21,21 @@ module GemDock
   #   result = executor.execute("3.2.0", "bundle install")
   #
   class ContainerCommandExecutor
-    attr_reader :docker, :health_check, :state_manager, :logger
+    attr_reader :docker_command, :health_check, :state_manager, :logger
 
     # Initialize the command executor
     #
-    # @param docker [DockerCommand] Docker command wrapper
+    # @param docker_command [DockerCommand] Docker command wrapper
     # @param health_check [ContainerHealthCheck] Health check service
     # @param state_manager [StateManager] State management service
     # @param logger [Logger] Logger instance
     def initialize(
-      docker: DockerCommand.new,
+      docker_command: DockerCommand.new,
       health_check: ContainerHealthCheck.new,
       state_manager: StateManager.new,
-      logger: GemDock::Logger.instance
+      logger: GemDock::Logger.new
     )
-      @docker = docker
+      @docker_command = docker_command
       @health_check = health_check
       @state_manager = state_manager
       @logger = logger
@@ -90,9 +90,9 @@ module GemDock
         command: command
       })
 
-      docker_command = build_docker_exec_command(container_id, command, workdir, env)
+      new_command = build_docker_exec_command(container_id, command, workdir, env)
 
-      result = docker.execute(docker_command, capture_output: !stream_output)
+      result = docker_command.execute(new_command, capture_output: !stream_output)
 
       if result[:success]
         logger.info("Command executed successfully", {
@@ -135,7 +135,7 @@ module GemDock
         command: command
       })
 
-      docker_command = build_docker_exec_command(
+      new_command = build_docker_exec_command(
         container_id,
         command,
         workdir,
@@ -144,7 +144,7 @@ module GemDock
       )
 
       # For interactive commands, we need to use system() to preserve TTY
-      exit_code = system(docker_command) ? 0 : ($?.exitstatus || 1)
+      exit_code = system(new_command) ? 0 : ($?.exitstatus || 1)
 
       logger.info("Interactive session ended", {
         ruby_version: ruby_version,

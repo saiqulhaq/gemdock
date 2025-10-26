@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'tmpdir'
+
 module IntegrationHelper
   # Generate unique container names to avoid conflicts
   def unique_container_name(ruby_version)
@@ -16,9 +18,8 @@ module IntegrationHelper
   # Get test-specific .gemdock directory
   def test_gemdock_dir
     @test_gemdock_dir ||= begin
-      dir = File.join(Dir.tmpdir, "gemdock-test-#{Process.pid}-#{Time.now.to_i}")
-      FileUtils.mkdir_p(dir)
-      dir
+      prefix = "gemdock-test-#{Process.pid}-#{Time.now.to_i}"
+      Dir.mktmpdir(prefix)
     end
   end
 
