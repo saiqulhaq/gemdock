@@ -12,3 +12,4 @@
 Gemfile.lock
 TODO.md
 .gemdock/logs/gemdock.log
+.byebug_history
