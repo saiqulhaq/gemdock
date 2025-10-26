@@ -59,7 +59,7 @@ module GemDock
       check_health: true
     )
       container_state = state_manager.container_state(ruby_version)
-      
+
       unless container_state["status"] == "running"
         logger.error("Container not running", {
           ruby_version: ruby_version,
@@ -74,7 +74,7 @@ module GemDock
       end
 
       container_id = container_state["container_id"]
-      
+
       if check_health && !verify_container_health(container_id, ruby_version)
         return {
           success: false,
@@ -91,9 +91,9 @@ module GemDock
       })
 
       docker_command = build_docker_exec_command(container_id, command, workdir, env)
-      
+
       result = docker.execute(docker_command, capture_output: !stream_output)
-      
+
       if result[:success]
         logger.info("Command executed successfully", {
           ruby_version: ruby_version,
@@ -118,7 +118,7 @@ module GemDock
     # @return [Integer] Exit code
     def execute_interactive(ruby_version, command: "bash", workdir: nil)
       container_state = state_manager.container_state(ruby_version)
-      
+
       unless container_state["status"] == "running"
         logger.error("Container not running", {
           ruby_version: ruby_version,
@@ -128,7 +128,7 @@ module GemDock
       end
 
       container_id = container_state["container_id"]
-      
+
       logger.info("Starting interactive session", {
         ruby_version: ruby_version,
         container_id: container_id,
@@ -145,7 +145,7 @@ module GemDock
 
       # For interactive commands, we need to use system() to preserve TTY
       exit_code = system(docker_command) ? 0 : ($?.exitstatus || 1)
-      
+
       logger.info("Interactive session ended", {
         ruby_version: ruby_version,
         exit_code: exit_code
@@ -175,7 +175,7 @@ module GemDock
     # @return [Boolean] true if healthy
     def verify_container_health(container_id, ruby_version)
       status = health_check.check(container_id)
-      
+
       if status.healthy?
         logger.debug("Container health check passed", {
           ruby_version: ruby_version,
@@ -203,23 +203,23 @@ module GemDock
     # @return [String] Docker exec command
     def build_docker_exec_command(container_id, command, workdir, env, interactive: false)
       parts = ["exec"]
-      
+
       if interactive
         parts << "-it"
       end
-      
+
       if workdir
         parts << "-w" << workdir
       end
-      
+
       if env
         env.each do |key, value|
           parts << "-e" << "#{key}=#{value}"
         end
       end
-      
+
       parts << container_id
-      
+
       # For interactive shells, don't wrap in sh -c
       if interactive
         parts << command
@@ -227,7 +227,7 @@ module GemDock
         # Wrap command in shell for proper argument parsing
         parts << "sh" << "-c" << command
       end
-      
+
       parts.join(" ")
     end
   end

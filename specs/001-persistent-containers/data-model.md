@@ -21,7 +21,7 @@ Represents a Docker container managed by Gemdock, tracking its lifecycle and met
 containers:
   "3.2.0":                          # Ruby version (key)
     container_id: "abc123def456"    # Docker container ID (string, nullable)
-    status: "running"               # Container status (enum: running|stopped|not_provisioned)
+    'status' => "running"               # Container status (enum: running|stopped|not_provisioned)
     last_used: "2025-10-19T14:30:00Z"  # ISO 8601 timestamp (string)
     volume_name: "bundler_data_ruby_3_2_0"  # Associated volume (string)
     compose_file: ".gemdock/docker-compose-ruby-3-2-0.yml"  # Compose file path (string)
@@ -265,7 +265,7 @@ last_updated: "2025-10-19T14:30:00Z"
 containers:
   "3.2.0":
     container_id: "abc123def456"
-    status: "running"
+    'status' => "running"
     last_used: "2025-10-19T14:30:00Z"
     volume_name: "bundler_data_ruby_3_2_0"
     compose_file: ".gemdock/docker-compose-ruby-3-2-0.yml"
@@ -278,10 +278,10 @@ containers:
 ```yaml
 containers:
   "3.2.0":
-    status: "running"
+    'status' => "running"
     container_id: "abc123"
   "2.7.0":
-    status: "not_provisioned"
+    'status' => "not_provisioned"
 ```
 
 **User runs**: `gemdock switch 2.7.0`
@@ -302,10 +302,10 @@ containers:
 current_ruby: "2.7.0"
 containers:
   "3.2.0":
-    status: "stopped"
+    'status' => "stopped"
     container_id: "abc123"
   "2.7.0":
-    status: "running"
+    'status' => "running"
     container_id: "xyz789"
     created_at: "2025-10-19T14:35:00Z"
 ```
@@ -331,14 +331,14 @@ containers:
     container_id: "xyz789"
     created_at: "2025-10-18T10:00:00Z"
     last_used: "2025-10-19T09:00:00Z"
-    status: "stopped"
+    'status' => "stopped"
     volume_name: "bundler_data_ruby_2_7_0"
   "3.2.0":
     compose_file: ".gemdock/docker-compose-ruby-3-2-0.yml"
     container_id: "abc123"
     created_at: "2025-10-19T14:30:00Z"
     last_used: "2025-10-19T14:30:00Z"
-    status: "running"
+    'status' => "running"
     volume_name: "bundler_data_ruby_3_2_0"
 current_ruby: "3.2.0"
 last_updated: "2025-10-19T14:30:00Z"

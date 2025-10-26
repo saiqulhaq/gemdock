@@ -91,7 +91,7 @@ module GemDock
       # Update state
       state_manager.update_container(
         ruby_version,
-        status: "not_provisioned",
+        'status' => "not_provisioned",
         container_id: nil,
         volume_name: nil
       )

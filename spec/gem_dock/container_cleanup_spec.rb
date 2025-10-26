@@ -136,7 +136,7 @@ RSpec.describe GemDock::ContainerCleanup do
       it "updates the state" do
         expect(state_manager).to receive(:update_container).with(
           ruby_version,
-          status: "not_provisioned",
+          'status' => "not_provisioned",
           container_id: nil,
           volume_name: nil
         )

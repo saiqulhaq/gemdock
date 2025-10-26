@@ -9,7 +9,7 @@ RSpec.describe GemDock::AutoProvisioner do
   let(:state_manager) { instance_double(GemDock::StateManager) }
   let(:config_manager) { instance_double(GemDock::ConfigManager) }
   let(:logger) { instance_double(GemDock::Logger, info: nil, warn: nil, error: nil, debug: nil) }
-  
+
   let(:auto_provisioner) do
     described_class.new(
       provisioner: provisioner,
@@ -32,7 +32,7 @@ RSpec.describe GemDock::AutoProvisioner do
     context "when container is already running" do
       before do
         allow(state_manager).to receive(:container_state).with(ruby_version)
-          .and_return({ status: "running", container_id: "abc123" })
+          .and_return({ 'status' => "running", container_id: "abc123" })
         allow(lifecycle).to receive(:start)
         allow(provisioner).to receive(:provision)
       end
@@ -60,12 +60,12 @@ RSpec.describe GemDock::AutoProvisioner do
     context "when container is stopped" do
       before do
         allow(state_manager).to receive(:container_state).with(ruby_version)
-          .and_return({ status: "stopped", container_id: "abc123" })
-        
+          .and_return({ 'status' => "stopped", container_id: "abc123" })
+
         # Create compose file
         FileUtils.mkdir_p(File.dirname(compose_file))
         File.write(compose_file, "version: '3.8'")
-        
+
         allow(provisioner).to receive(:compose_file_path).and_return(compose_file)
         allow(lifecycle).to receive(:start).and_return(true)
       end
@@ -92,8 +92,8 @@ RSpec.describe GemDock::AutoProvisioner do
     context "when container is stopped but compose file missing" do
       before do
         allow(state_manager).to receive(:container_state).with(ruby_version)
-          .and_return({ status: "stopped", container_id: "abc123" })
-        
+          .and_return({ 'status' => "stopped", container_id: "abc123" })
+
         allow(provisioner).to receive(:compose_file_path).and_return(compose_file)
         allow(provisioner).to receive(:provision).and_return(compose_file)
         allow(lifecycle).to receive(:start).and_return(true)
@@ -117,8 +117,8 @@ RSpec.describe GemDock::AutoProvisioner do
     context "when container is not provisioned with auto_provision enabled" do
       before do
         allow(state_manager).to receive(:container_state).with(ruby_version)
-          .and_return({ status: "not_provisioned" })
-        
+          .and_return({ 'status' => "not_provisioned" })
+
         allow(config_manager).to receive(:auto_provision?).and_return(true)
         allow(provisioner).to receive(:provision).and_return(compose_file)
         allow(lifecycle).to receive(:start).and_return(true)
@@ -148,8 +148,8 @@ RSpec.describe GemDock::AutoProvisioner do
     context "when container is not provisioned with auto_provision disabled" do
       before do
         allow(state_manager).to receive(:container_state).with(ruby_version)
-          .and_return({ status: "not_provisioned" })
-        
+          .and_return({ 'status' => "not_provisioned" })
+
         allow(config_manager).to receive(:auto_provision?).and_return(false)
       end
 
@@ -231,8 +231,8 @@ RSpec.describe GemDock::AutoProvisioner do
     context "when provisioning fails" do
       before do
         allow(state_manager).to receive(:container_state).with(ruby_version)
-          .and_return({ status: "not_provisioned" })
-        
+          .and_return({ 'status' => "not_provisioned" })
+
         allow(config_manager).to receive(:auto_provision?).and_return(true)
         allow(provisioner).to receive(:provision).and_return(compose_file)
         allow(lifecycle).to receive(:start).and_return(false)
